@@ -1144,12 +1144,12 @@ const statusLabels = {
 // LOGIN SCREEN - DEUX COLONNES
 // ============================================
 
-// Pays disponibles
-const COUNTRIES = [
-  { 
-    id: 'cameroun', 
-    name: 'Cameroun', 
-    label: 'Cameroun (Siège social)', 
+// Configuration par pays - Données contextualisées
+const COUNTRIES_CONFIG = {
+  cameroun: {
+    id: 'cameroun',
+    name: 'Cameroun',
+    label: 'Cameroun (Siège social)',
     flagSvg: (
       <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
         <rect fill="#007A5E" width="15" height="30"/>
@@ -1158,12 +1158,63 @@ const COUNTRIES = [
         <polygon fill="#FCD116" points="22.5,11.5 23.4,14.3 26.3,14.3 24,16 24.9,18.8 22.5,17.1 20.1,18.8 21,16 18.7,14.3 21.6,14.3" stroke="#007A5E" strokeWidth="0.3"/>
       </svg>
     ),
-    color: 'from-green-500 to-yellow-500' 
+    color: 'from-green-500 to-yellow-500',
+    capital: 'Yaoundé',
+    currency: 'XAF',
+    currencyName: 'Franc CFA BEAC',
+    langues: ['Français', 'Anglais'],
+    // Villes par région
+    regions: [
+      { name: 'Littoral', cities: ['Douala', 'Nkongsamba', 'Loum', 'Mbanga'] },
+      { name: 'Centre', cities: ['Yaoundé', 'Obala', 'Mbalmayo', 'Éséka'] },
+      { name: 'Ouest', cities: ['Bafoussam', 'Douala', 'Dschang', 'Mbouda', 'Foumban'] },
+      { name: 'Nord', cities: ['Garoua', 'Maroua', 'Ngaoundéré', 'Kaélé'] },
+      { name: 'Sud', cities: ['Ebolowa', 'Kribi', 'Sangmélima'] },
+      { name: 'Est', cities: ['Bertoua', 'Batouri', 'Yokadouma'] },
+      { name: 'Nord-Ouest', cities: ['Bamenda', 'Bafut', 'Kumbo'] },
+      { name: 'Sud-Ouest', cities: ['Buéa', 'Limbe', 'Kumba'] },
+      { name: 'Adamaoua', cities: ['Ngaoundéré', 'Meiganga', 'Tibati'] },
+      { name: 'Extrême-Nord', cities: ['Maroua', 'Kousséri', 'Mora', 'Yagoua'] },
+    ],
+    // Droit du travail OHADA adapté au Cameroun
+    laborLaw: {
+      workingHoursPerWeek: 40,
+      dailyHours: 8,
+      overtimeRate: 1.25, // 25% de majoration
+      overtimeRateSunday: 1.50, // 50% de majoration
+      overtimeRateNight: 1.30, // 30% de majoration
+      paidLeaveDays: 18, // jours ouvrables
+      sickLeaveDays: 90, // à demi-salaire
+      maternityLeaveDays: 98, // 14 semaines
+      paternityLeaveDays: 3,
+      noticePeriodDays: 30,
+      probationPeriodMonths: 3,
+      minimumWage: 52257, // FCFA/mois (SMIG 2024)
+      retirementAge: 60,
+      socialSecurityRate: 12.5, // % employeur + employé
+      taxRate: 'Impôt sur salaire progressif (10-38%)',
+    },
+    // Jours fériés
+    publicHolidays: [
+      { date: '01-01', name: 'Jour de l\'An' },
+      { date: '02-11', name: 'Fête de la Jeunesse' },
+      { date: '05-01', name: 'Fête du Travail' },
+      { date: '05-20', name: 'Fête Nationale' },
+      { date: '08-15', name: 'Assomption' },
+      { date: '12-25', name: 'Noël' },
+    ],
+    // Indicateurs économiques
+    economicIndicators: {
+      gdpGrowth: 4.3, // %
+      inflation: 4.5, // %
+      population: 28.5, // millions
+      pharmaceuticalMarket: 450, // milliards FCFA
+    }
   },
-  { 
-    id: 'gabon', 
-    name: 'Gabon', 
-    label: 'Gabon', 
+  gabon: {
+    id: 'gabon',
+    name: 'Gabon',
+    label: 'Gabon',
     flagSvg: (
       <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
         <rect fill="#009A49" width="45" height="10"/>
@@ -1171,12 +1222,58 @@ const COUNTRIES = [
         <rect fill="#003893" y="20" width="45" height="10"/>
       </svg>
     ),
-    color: 'from-blue-500 to-green-500' 
+    color: 'from-blue-500 to-green-500',
+    capital: 'Libreville',
+    currency: 'XAF',
+    currencyName: 'Franc CFA BEAC',
+    langues: ['Français'],
+    regions: [
+      { name: 'Estuaire', cities: ['Libreville', 'Owendo', 'Akanda', 'Ntoum'] },
+      { name: 'Haut-Ogooué', cities: ['Franceville', 'Moanda', 'Mounana', 'Okondja'] },
+      { name: 'Moyen-Ogooué', cities: ['Lambaréné', 'Ndjolé', 'Fougamou'] },
+      { name: 'Ogooué-Maritime', cities: ['Port-Gentil', 'Gamba', 'Omboué'] },
+      { name: 'Ngounié', cities: ['Mouila', 'Ndendé', 'Fougamou'] },
+      { name: 'Nyanga', cities: ['Tchibanga', 'Mayumba', 'Ndindi'] },
+      { name: 'Woleu-Ntem', cities: ['Oyem', 'Bitam', 'Mitzic', 'Minvoul'] },
+      { name: 'Ogooué-Ivindo', cities: ['Makokou', 'Booué', 'Ipassa'] },
+      { name: 'Ogooué-Lolo', cities: ['Koulamoutou', 'Lastoursville', 'Lékoni'] },
+    ],
+    laborLaw: {
+      workingHoursPerWeek: 40,
+      dailyHours: 8,
+      overtimeRate: 1.30,
+      overtimeRateSunday: 1.50,
+      overtimeRateNight: 1.35,
+      paidLeaveDays: 24, // Plus généreux au Gabon
+      sickLeaveDays: 90,
+      maternityLeaveDays: 98,
+      paternityLeaveDays: 10, // Plus de jours au Gabon
+      noticePeriodDays: 30,
+      probationPeriodMonths: 3,
+      minimumWage: 150000, // FCFA/mois (SMIG Gabon)
+      retirementAge: 60,
+      socialSecurityRate: 15,
+      taxRate: 'Impôt sur salaire progressif (5-45%)',
+    },
+    publicHolidays: [
+      { date: '01-01', name: 'Jour de l\'An' },
+      { date: '03-12', name: 'Fête de la Renaissance' },
+      { date: '05-01', name: 'Fête du Travail' },
+      { date: '08-15', name: 'Assomption' },
+      { date: '08-17', name: 'Fête de l\'Indépendance' },
+      { date: '12-25', name: 'Noël' },
+    ],
+    economicIndicators: {
+      gdpGrowth: 3.2,
+      inflation: 3.8,
+      population: 2.3,
+      pharmaceuticalMarket: 180,
+    }
   },
-  { 
-    id: 'congo', 
-    name: 'Congo', 
-    label: 'Congo', 
+  congo: {
+    id: 'congo',
+    name: 'Congo',
+    label: 'Congo',
     flagSvg: (
       <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
         <polygon fill="#009543" points="0,0 45,0 45,30"/>
@@ -1184,12 +1281,59 @@ const COUNTRIES = [
         <polygon fill="#DC0000" points="0,0 0,30 22.5,15"/>
       </svg>
     ),
-    color: 'from-red-500 to-yellow-500' 
+    color: 'from-red-500 to-yellow-500',
+    capital: 'Brazzaville',
+    currency: 'XAF',
+    currencyName: 'Franc CFA CEMAC',
+    langues: ['Français', 'Lingala', 'Kituba'],
+    regions: [
+      { name: 'Brazzaville', cities: ['Brazzaville', 'Poto-Poto', 'Moungali', 'Ouenzé'] },
+      { name: 'Pointe-Noire', cities: ['Pointe-Noire', 'Loango', 'Tchiamba-Nzassi'] },
+      { name: 'Pool', cities: ['Kinkala', 'Mbanza-Ndounga', 'Boko'] },
+      { name: 'Niari', cities: ['Dolisie', 'Nkayi', 'Mossendjo'] },
+      { name: 'Bouenza', cities: ['Madingou', 'Nkayi', 'Loutété'] },
+      { name: 'Lékoumou', cities: ['Sibiti', 'Komono', 'Zanaga'] },
+      { name: 'Sangha', cities: ['Ouesso', 'Sembé', 'Souanké'] },
+      { name: 'Likouala', cities: ['Impfondo', 'Dongou', 'Enyellé'] },
+      { name: 'Cuvette', cities: ['Owando', 'Oyo', 'Makoua'] },
+      { name: 'Plateaux', cities: ['Djambala', 'Gamboma', 'Lékana'] },
+    ],
+    laborLaw: {
+      workingHoursPerWeek: 40,
+      dailyHours: 8,
+      overtimeRate: 1.25,
+      overtimeRateSunday: 1.50,
+      overtimeRateNight: 1.30,
+      paidLeaveDays: 22,
+      sickLeaveDays: 90,
+      maternityLeaveDays: 98,
+      paternityLeaveDays: 5,
+      noticePeriodDays: 30,
+      probationPeriodMonths: 3,
+      minimumWage: 65000, // FCFA/mois (SMIG Congo)
+      retirementAge: 60,
+      socialSecurityRate: 14,
+      taxRate: 'Impôt sur salaire progressif (10-40%)',
+    },
+    publicHolidays: [
+      { date: '01-01', name: 'Jour de l\'An' },
+      { date: '05-01', name: 'Fête du Travail' },
+      { date: '08-15', name: 'Fête de l\'Indépendance' },
+      { date: '08-15', name: 'Assomption' },
+      { date: '11-01', name: 'Toussaint' },
+      { date: '12-25', name: 'Noël' },
+    ],
+    economicIndicators: {
+      gdpGrowth: 3.5,
+      inflation: 4.0,
+      population: 5.8,
+      pharmaceuticalMarket: 120,
+    }
   },
-  { 
-    id: 'tchad', 
-    name: 'Tchad', 
-    label: 'Tchad', 
+  tchad: {
+    id: 'tchad',
+    name: 'Tchad',
+    label: 'Tchad',
     flagSvg: (
       <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
         <rect fill="#002664" width="15" height="30"/>
@@ -1197,9 +1341,60 @@ const COUNTRIES = [
         <rect fill="#CE1126" x="30" width="15" height="30"/>
       </svg>
     ),
-    color: 'from-blue-500 to-red-500' 
-  },
-]
+    color: 'from-blue-500 to-red-500',
+    capital: 'N\'Djamena',
+    currency: 'XAF',
+    currencyName: 'Franc CFA BEAC',
+    langues: ['Français', 'Arabe'],
+    regions: [
+      { name: 'N\'Djamena', cities: ['N\'Djamena', 'Farcha', 'Goudji', 'Chagoua'] },
+      { name: 'Hadjer-Lamis', cities: ['Massakory', 'Bokoro', 'Massaguet'] },
+      { name: 'Chari-Baguirmi', cities: ['Massenya', 'Mandélia', 'Linia'] },
+      { name: 'Guéra', cities: ['Mongo', 'Bitkine', 'Melfi'] },
+      { name: 'Mayo-Kebbi Est', cities: ['Bongor', 'Guelendeng', 'Kelo'] },
+      { name: 'Mayo-Kebbi Ouest', cities: ['Pala', 'Léré', 'Fianga'] },
+      { name: 'Logone Occidental', cities: ['Moundou', 'Baïbokoum', 'Béboto'] },
+      { name: 'Logone Oriental', cities: ['Doba', 'Bébédja', 'Goré'] },
+      { name: 'Tandjilé', cities: ['Laï', 'Kélo', 'Pala'] },
+      { name: 'Moyen-Chari', cities: ['Sarh', 'Kyabé', 'Moïssala'] },
+      { name: 'Salamat', cities: ['Am Timan', 'Haraze Mangueigne'] },
+      { name: 'Ouaddaï', cities: ['Abéché', 'Adré', 'Gueréda'] },
+    ],
+    laborLaw: {
+      workingHoursPerWeek: 39, // Légèrement différent au Tchad
+      dailyHours: 8,
+      overtimeRate: 1.25,
+      overtimeRateSunday: 1.50,
+      overtimeRateNight: 1.30,
+      paidLeaveDays: 18,
+      sickLeaveDays: 90,
+      maternityLeaveDays: 98,
+      paternityLeaveDays: 3,
+      noticePeriodDays: 30,
+      probationPeriodMonths: 3,
+      minimumWage: 60000, // FCFA/mois (SMIG Tchad)
+      retirementAge: 60,
+      socialSecurityRate: 12,
+      taxRate: 'Impôt sur salaire progressif (10-35%)',
+    },
+    publicHolidays: [
+      { date: '01-01', name: 'Jour de l\'An' },
+      { date: '05-01', name: 'Fête du Travail' },
+      { date: '08-11', name: 'Fête de l\'Indépendance' },
+      { date: '11-01', name: 'Toussaint' },
+      { date: '12-25', name: 'Noël' },
+    ],
+    economicIndicators: {
+      gdpGrowth: 4.8,
+      inflation: 5.2,
+      population: 17.2,
+      pharmaceuticalMarket: 85,
+    }
+  }
+}
+
+// Liste des pays pour l'interface
+const COUNTRIES = Object.values(COUNTRIES_CONFIG)
 
 function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [email, setEmail] = useState('')
@@ -1228,9 +1423,9 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
 
     setIsLoading(true)
     
-    // Récupérer le pays sélectionné
-    const countryObj = COUNTRIES.find(c => c.id === selectedCountry)
-    const countryName = countryObj?.name || 'Cameroun'
+    // Récupérer la configuration du pays sélectionné
+    const countryConfig = COUNTRIES_CONFIG[selectedCountry as keyof typeof COUNTRIES_CONFIG]
+    const countryName = countryConfig?.name || 'Cameroun'
 
     setTimeout(() => {
       // Vérifier le type de portail et les identifiants
@@ -1278,11 +1473,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
         else if (email.includes('compta') || email.includes('finance')) role = 'comptabilite'
         else if (email.includes('marketing')) role = 'marketing'
 
-        // Définir la région en fonction du pays
-        let region = 'Douala'
-        if (selectedCountry === 'gabon') region = 'Libreville'
-        else if (selectedCountry === 'congo') region = 'Brazzaville'
-        else if (selectedCountry === 'tchad') region = 'N\'Djamena'
+        // Utiliser la capitale ou la première ville de la première région du pays
+        const region = countryConfig?.capital || countryConfig?.regions[0]?.cities[0] || 'Douala'
 
         onLogin({
           id: 'user-' + Date.now(),
