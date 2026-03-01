@@ -1208,12 +1208,18 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [selectedPortal, setSelectedPortal] = useState<'interne' | 'fournisseur' | 'client'>('interne')
-  const [selectedCountry, setSelectedCountry] = useState<string>('cameroun')
+  const [selectedCountry, setSelectedCountry] = useState<string>('') // Pas de sélection par défaut
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
     setError('')
+
+    // Vérification obligatoire du pays
+    if (!selectedCountry) {
+      setError('Veuillez sélectionner un pays')
+      return
+    }
 
     if (!email || !password) {
       setError('Veuillez remplir tous les champs')
@@ -1373,7 +1379,12 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
       }
     }
     
-    return baseCredentials[selectedCountry]?.[selectedPortal] || baseCredentials.cameroun.interne
+    // Retourner un tableau vide si aucun pays n'est sélectionné
+    if (!selectedCountry) {
+      return []
+    }
+    
+    return baseCredentials[selectedCountry]?.[selectedPortal] || []
   }
   
   const testCredentials = getTestCredentials()
@@ -1482,9 +1493,11 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
               <p className="text-muted-foreground">Connectez-vous à votre espace de travail</p>
             </div>
 
-            {/* Sélecteur de pays */}
+            {/* Sélecteur de pays - OBLIGATOIRE */}
             <div className="mb-4">
-              <Label className="text-sm font-medium mb-2 block">Sélectionnez votre pays</Label>
+              <Label className="text-sm font-medium mb-2 block">
+                Sélectionnez votre pays <span className="text-red-500">*</span>
+              </Label>
               <div className="grid grid-cols-2 gap-2">
                 {COUNTRIES.map((country) => (
                   <button
@@ -1494,6 +1507,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
                     className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
                       selectedCountry === country.id 
                         ? 'border-primary bg-primary/5 shadow-md' 
+                        : selectedCountry === '' && error.includes('pays')
+                        ? 'border-red-300 hover:border-red-400 bg-red-50/50'
                         : 'border-muted hover:border-muted-foreground/30'
                     }`}
                   >
@@ -1501,9 +1516,18 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
                     <div className="text-left flex-1 min-w-0">
                       <span className="text-xs font-medium block truncate">{country.label}</span>
                     </div>
+                    {selectedCountry === country.id && (
+                      <Check className="h-4 w-4 text-primary flex-shrink-0" />
+                    )}
                   </button>
                 ))}
               </div>
+              {selectedCountry === '' && (
+                <p className="text-xs text-muted-foreground mt-1 flex items-center gap-1">
+                  <AlertTriangle className="h-3 w-3" />
+                  Veuillez sélectionner un pays pour continuer
+                </p>
+              )}
             </div>
 
             {/* Sélecteur de portail */}
