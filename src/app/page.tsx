@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play
+  Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play, Truck, Receipt
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -1150,6 +1150,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [showPassword, setShowPassword] = useState(false)
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
+  const [selectedPortal, setSelectedPortal] = useState<'interne' | 'fournisseur' | 'client'>('interne')
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -1164,22 +1165,60 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
     setIsLoading(true)
 
     setTimeout(() => {
-      let role: UserRole = 'dm'
-      if (email.includes('admin')) role = 'admin'
-      else if (email.includes('superviseur') || email.includes('supervisor')) role = 'superviseur'
-      else if (email.includes('compta') || email.includes('finance')) role = 'comptabilite'
-      else if (email.includes('marketing')) role = 'marketing'
+      // Vérifier le type de portail et les identifiants
+      if (selectedPortal === 'fournisseur') {
+        const supplier = supplierAccounts.find(s => s.email.toLowerCase() === email.toLowerCase())
+        if (supplier) {
+          onLogin({
+            id: supplier.id,
+            name: supplier.companyName,
+            email: supplier.email,
+            role: 'fournisseur',
+            region: supplier.city,
+            country: supplier.country
+          })
+          setIsLoading(false)
+          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Fournisseur!` })
+          return
+        }
+      } else if (selectedPortal === 'client') {
+        const client = clientAccounts.find(c => c.email.toLowerCase() === email.toLowerCase())
+        if (client) {
+          onLogin({
+            id: client.id,
+            name: client.companyName,
+            email: client.email,
+            role: 'client',
+            region: client.region,
+            country: client.country
+          })
+          setIsLoading(false)
+          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Client!` })
+          return
+        }
+      } else {
+        // Portail interne Prodipharm
+        let role: UserRole = 'dm'
+        if (email.includes('admin')) role = 'admin'
+        else if (email.includes('superviseur') || email.includes('supervisor')) role = 'superviseur'
+        else if (email.includes('compta') || email.includes('finance')) role = 'comptabilite'
+        else if (email.includes('marketing')) role = 'marketing'
 
-      onLogin({
-        id: 'user-' + Date.now(),
-        name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()),
-        email: email,
-        role: role,
-        region: 'Douala',
-        country: 'Cameroun'
-      })
+        onLogin({
+          id: 'user-' + Date.now(),
+          name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()),
+          email: email,
+          role: role,
+          region: 'Douala',
+          country: 'Cameroun'
+        })
+        setIsLoading(false)
+        toast({ title: 'Connexion réussie', description: 'Bienvenue sur PharmaLink!' })
+        return
+      }
+      
+      setError('Identifiants incorrects')
       setIsLoading(false)
-      toast({ title: 'Connexion réussie', description: 'Bienvenue sur PharmaLink!' })
     }, 800)
   }
 
@@ -1190,6 +1229,28 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
     { icon: Target, value: '15K+', label: 'HCP suivis' },
     { icon: TrendingUp, value: '98%', label: 'Disponibilité' }
   ]
+  
+  // Identifiants de test selon le portail
+  const testCredentials = {
+    interne: [
+      { role: 'Admin', email: 'admin@prodipharm.com' },
+      { role: 'Superviseur', email: 'superviseur@prodipharm.com' },
+      { role: 'DM', email: 'jean.moussombi@prodipharm.com' },
+      { role: 'Compta', email: 'compta@prodipharm.com' }
+    ],
+    fournisseur: [
+      { role: 'PharmaPlus', email: 'marc@pharmaplus.cm' },
+      { role: 'Afrique Santé', email: 'aminata@afriquesante.sn' },
+      { role: 'EuroPharm', email: 'h.mueller@europharm.de' },
+      { role: 'India Pharma', email: 'raj@indiapharma.in' }
+    ],
+    client: [
+      { role: 'Pharmacie Centre', email: 'pharmacie.centre@email.cm' },
+      { role: 'Clinique Espérance', email: 'clinique.esperance@email.cm' },
+      { role: 'Hôpital Central', email: 'hopital.central@email.cm' },
+      { role: 'Dr. Nkodo', email: 'nkodo@email.cm' }
+    ]
+  }
 
   return (
     <div className="min-h-screen flex">
@@ -1295,6 +1356,34 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
               <p className="text-muted-foreground">Connectez-vous à votre espace de travail</p>
             </div>
 
+            {/* Sélecteur de portail */}
+            <div className="mb-6">
+              <Label className="text-sm font-medium mb-2 block">Type de portail</Label>
+              <div className="grid grid-cols-3 gap-2">
+                {[
+                  { id: 'interne', label: 'Interne', icon: Building2, color: 'from-blue-500 to-indigo-500' },
+                  { id: 'fournisseur', label: 'Fournisseur', icon: Truck, color: 'from-emerald-500 to-teal-500' },
+                  { id: 'client', label: 'Client', icon: ShoppingCart, color: 'from-purple-500 to-pink-500' },
+                ].map((portal) => (
+                  <button
+                    key={portal.id}
+                    type="button"
+                    onClick={() => setSelectedPortal(portal.id as typeof selectedPortal)}
+                    className={`flex flex-col items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      selectedPortal === portal.id 
+                        ? 'border-primary bg-primary/5 shadow-md' 
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <div className={`w-10 h-10 rounded-lg bg-gradient-to-br ${portal.color} flex items-center justify-center`}>
+                      <portal.icon className="h-5 w-5 text-white" />
+                    </div>
+                    <span className="text-xs font-medium">{portal.label}</span>
+                  </button>
+                ))}
+              </div>
+            </div>
+
             <Card className="border-0 shadow-xl">
               <CardContent className="p-6">
                 <form onSubmit={handleLogin} className="space-y-4">
@@ -1319,7 +1408,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
                       <Input
                         id="email"
                         type="email"
-                        placeholder="votre.email@prodipharm.com"
+                        placeholder={selectedPortal === 'fournisseur' ? 'email@fournisseur.com' : selectedPortal === 'client' ? 'email@pharmacie.com' : 'votre.email@prodipharm.com'}
                         value={email}
                         onChange={(e) => setEmail(e.target.value)}
                         disabled={isLoading}
@@ -1377,12 +1466,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
                 <div className="mt-6 pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-3">Identifiants de test :</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {[
-                      { role: 'Admin', email: 'admin@prodipharm.com' },
-                      { role: 'Superviseur', email: 'superviseur@prodipharm.com' },
-                      { role: 'DM', email: 'jean.moussombi@prodipharm.com' },
-                      { role: 'Compta', email: 'compta@prodipharm.com' }
-                    ].map((item, i) => (
+                    {testCredentials[selectedPortal].map((item, i) => (
                       <button
                         key={i}
                         type="button"
@@ -12938,6 +13022,958 @@ function ComposeMessageModal({
 }
 
 // ============================================
+// PORTAIL FOURNISSEUR & CLIENT TYPES
+// ============================================
+
+interface SupplierAccount {
+  id: string
+  supplierId: string
+  companyName: string
+  contactPerson: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  country: string
+  specialty: string
+  status: 'active' | 'inactive' | 'pending'
+  avatar?: string
+  lastLogin?: string
+  createdAt: string
+}
+
+interface ClientAccount {
+  id: string
+  clientId: string
+  companyName: string
+  type: 'pharmacy' | 'clinic' | 'hospital' | 'doctor'
+  contactPerson: string
+  email: string
+  phone: string
+  address: string
+  city: string
+  region: string
+  country: string
+  category: 'A' | 'B' | 'C'
+  status: 'active' | 'inactive' | 'pending'
+  avatar?: string
+  creditLimit: number
+  currentBalance: number
+  lastLogin?: string
+  createdAt: string
+}
+
+interface SupplierOrder {
+  id: string
+  orderNumber: string
+  supplierId: string
+  supplierName: string
+  items: { productId: string; productName: string; quantity: number; unitPrice: number; total: number }[]
+  subtotal: number
+  tax: number
+  total: number
+  status: 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  orderDate: string
+  expectedDeliveryDate?: string
+  trackingNumber?: string
+  notes?: string
+  createdAt: string
+}
+
+interface ClientOrder {
+  id: string
+  orderNumber: string
+  clientId: string
+  clientName: string
+  items: { productId: string; productName: string; quantity: number; unitPrice: number; total: number; available?: boolean }[]
+  subtotal: number
+  tax: number
+  total: number
+  status: 'draft' | 'pending' | 'confirmed' | 'processing' | 'shipped' | 'delivered' | 'cancelled'
+  orderDate: string
+  deliveryDate?: string
+  deliveryAddress?: string
+  trackingNumber?: string
+  notes?: string
+  createdAt: string
+}
+
+interface CartItem {
+  id: string
+  productId: string
+  productName: string
+  productCode: string
+  quantity: number
+  unitPrice: number
+  total: number
+  stockAvailable: number
+}
+
+interface SupplierInvoice {
+  id: string
+  invoiceNumber: string
+  orderId: string
+  orderNumber: string
+  supplierId: string
+  supplierName: string
+  items: { productId: string; productName: string; quantity: number; unitPrice: number; total: number }[]
+  subtotal: number
+  tax: number
+  total: number
+  status: 'draft' | 'sent' | 'paid' | 'overdue' | 'cancelled'
+  issueDate: string
+  dueDate: string
+  paidAmount: number
+  notes?: string
+  createdAt: string
+}
+
+// ============================================
+// DONNÉES PORTAILS FOURNISSEURS & CLIENTS
+// ============================================
+
+// Comptes fournisseurs pour le portail
+const supplierAccounts: SupplierAccount[] = [
+  { id: 'sup_acc1', supplierId: 'supp1', companyName: 'PharmaPlus SARL', contactPerson: 'Marc Tchouamo', email: 'marc@pharmaplus.cm', phone: '+237 699 111 222', address: 'Zone Industrielle', city: 'Douala', country: 'Cameroun', specialty: 'Médicaments génériques', status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-26', createdAt: '2024-06-15' },
+  { id: 'sup_acc2', supplierId: 'supp2', companyName: 'Afrique Santé Import', contactPerson: 'Aminata Diallo', email: 'aminata@afriquesante.sn', phone: '+221 77 333 444', address: 'Dakar Plateau', city: 'Dakar', country: 'Sénégal', specialty: 'Dispositifs médicaux', status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-25', createdAt: '2024-08-20' },
+  { id: 'sup_acc3', supplierId: 'supp3', companyName: 'EuroPharm GmbH', contactPerson: 'Hans Mueller', email: 'h.mueller@europharm.de', phone: '+49 30 1234 5678', address: 'Industriestraße 45', city: 'Berlin', country: 'Allemagne', specialty: 'Spécialités pharmaceutiques', status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', createdAt: '2024-01-10' },
+  { id: 'sup_acc4', supplierId: 'supp4', companyName: 'India Pharma Exports', contactPerson: 'Raj Patel', email: 'raj@indiapharma.in', phone: '+91 98 7654 3210', address: 'Mumbai Industrial Zone', city: 'Mumbai', country: 'Inde', specialty: 'API et principes actifs', status: 'active', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-24', createdAt: '2024-03-22' },
+]
+
+// Comptes clients pour le portail
+const clientAccounts: ClientAccount[] = [
+  { id: 'clt_acc1', clientId: 'cl1', companyName: 'Pharmacie du Centre', type: 'pharmacy', contactPerson: 'Pharmacien Jean-Pierre Atangana', email: 'pharmacie.centre@email.cm', phone: '+237 677 456 789', address: 'Avenue de l\'Indépendance', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face', creditLimit: 5000000, currentBalance: 1250000, lastLogin: '2025-02-27', createdAt: '2024-01-15' },
+  { id: 'clt_acc2', clientId: 'cl2', companyName: 'Clinique Bonne Espérance', type: 'clinic', contactPerson: 'Dr. Marie Fouda', email: 'clinique.esperance@email.cm', phone: '+237 677 678 901', address: 'Quartier Mvog-Mbi', city: 'Yaoundé', region: 'Centre', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face', creditLimit: 10000000, currentBalance: 3500000, lastLogin: '2025-02-26', createdAt: '2023-11-20' },
+  { id: 'clt_acc3', clientId: 'cl3', companyName: 'Hôpital Central de Douala', type: 'hospital', contactPerson: 'Dr. Paul Mbarga', email: 'hopital.central@email.cm', phone: '+237 699 345 678', address: 'Route de Bonanjo', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face', creditLimit: 20000000, currentBalance: 8500000, lastLogin: '2025-02-25', createdAt: '2023-05-10' },
+  { id: 'clt_acc4', clientId: 'cl4', companyName: 'Pharmacie des Plateaux', type: 'pharmacy', contactPerson: 'Mme Rose Tchinda', email: 'pharmacie.plateaux@email.cm', phone: '+237 699 567 890', address: 'Quartier Administratif', city: 'Bafoussam', region: 'Ouest', country: 'Cameroun', category: 'B', status: 'active', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face', creditLimit: 3000000, currentBalance: 450000, createdAt: '2024-04-05' },
+  { id: 'clt_acc5', clientId: 'cl5', companyName: 'Cabinet Médical Dr. Nkodo', type: 'doctor', contactPerson: 'Dr. Emmanuel Nkodo', email: 'nkodo@email.cm', phone: '+237 699 123 456', address: 'Akwa', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'B', status: 'active', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face', creditLimit: 1000000, currentBalance: 150000, lastLogin: '2025-02-27', createdAt: '2024-02-28' },
+]
+
+// Commandes fournisseurs
+const supplierOrders: SupplierOrder[] = [
+  { id: 'so1', orderNumber: 'PO-2025-001', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p1', productName: 'Paracétamol 500mg', quantity: 10000, unitPrice: 150, total: 1500000 }], subtotal: 1500000, tax: 0, total: 1500000, status: 'pending', orderDate: '2025-02-25', expectedDeliveryDate: '2025-03-05', notes: 'Commande urgente', createdAt: '2025-02-25' },
+  { id: 'so2', orderNumber: 'PO-2025-002', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p2', productName: 'Amoxicilline 250mg', quantity: 5000, unitPrice: 350, total: 1750000 }], subtotal: 1750000, tax: 0, total: 1750000, status: 'confirmed', orderDate: '2025-02-20', expectedDeliveryDate: '2025-02-28', trackingNumber: 'TRK-789456', createdAt: '2025-02-20' },
+  { id: 'so3', orderNumber: 'PO-2025-003', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p3', productName: 'Vitamine C 1000mg', quantity: 8000, unitPrice: 120, total: 960000 }], subtotal: 960000, tax: 0, total: 960000, status: 'shipped', orderDate: '2025-02-18', expectedDeliveryDate: '2025-02-26', trackingNumber: 'TRK-123456', createdAt: '2025-02-18' },
+  { id: 'so4', orderNumber: 'PO-2025-004', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p4', productName: 'CardioRelax', quantity: 2000, unitPrice: 8500, total: 17000000 }], subtotal: 17000000, tax: 0, total: 17000000, status: 'delivered', orderDate: '2025-02-10', expectedDeliveryDate: '2025-02-17', trackingNumber: 'TRK-456789', createdAt: '2025-02-10' },
+]
+
+// Commandes clients
+const clientOrders: ClientOrder[] = [
+  { id: 'co1', orderNumber: 'CMD-2025-001', clientId: 'cl1', clientName: 'Pharmacie du Centre', items: [{ productId: 'p1', productName: 'Paracétamol 500mg', quantity: 100, unitPrice: 2500, total: 250000 }], subtotal: 250000, tax: 0, total: 250000, status: 'delivered', orderDate: '2025-02-20', deliveryDate: '2025-02-22', trackingNumber: 'TRK-CMD001', createdAt: '2025-02-20' },
+  { id: 'co2', orderNumber: 'CMD-2025-002', clientId: 'cl1', clientName: 'Pharmacie du Centre', items: [{ productId: 'p2', productName: 'Ibuprofène 400mg', quantity: 80, unitPrice: 3200, total: 256000 }], subtotal: 256000, tax: 0, total: 256000, status: 'shipped', orderDate: '2025-02-25', trackingNumber: 'TRK-CMD002', createdAt: '2025-02-25' },
+  { id: 'co3', orderNumber: 'CMD-2025-003', clientId: 'cl2', clientName: 'Clinique Bonne Espérance', items: [{ productId: 'p3', productName: 'CardioRelax', quantity: 30, unitPrice: 12500, total: 375000 }], subtotal: 375000, tax: 0, total: 375000, status: 'processing', orderDate: '2025-02-26', createdAt: '2025-02-26' },
+]
+
+// Factures fournisseurs
+const supplierInvoices: SupplierInvoice[] = [
+  { id: 'si1', invoiceNumber: 'FAC-F-2025-001', orderId: 'so4', orderNumber: 'PO-2025-004', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p4', productName: 'CardioRelax', quantity: 2000, unitPrice: 8500, total: 17000000 }], subtotal: 17000000, tax: 0, total: 17000000, status: 'paid', issueDate: '2025-02-15', dueDate: '2025-03-15', paidAmount: 17000000, createdAt: '2025-02-15' },
+  { id: 'si2', invoiceNumber: 'FAC-F-2025-002', orderId: 'so3', orderNumber: 'PO-2025-003', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', items: [{ productId: 'p3', productName: 'Vitamine C 1000mg', quantity: 8000, unitPrice: 120, total: 960000 }], subtotal: 960000, tax: 0, total: 960000, status: 'sent', issueDate: '2025-02-22', dueDate: '2025-03-22', paidAmount: 0, createdAt: '2025-02-22' },
+]
+
+// Catalogue produits visible par les clients
+const clientCatalog: PharmaProduct[] = [
+  { id: 'cat1', code: 'PAR-500', name: 'Paracétamol 500mg', category: 'Antalgiques', description: 'Antalgique et antipyrétique', price: 2500, costPrice: 1500, stockQuantity: 5000, minStock: 500, maxStock: 10000, unit: 'boîte', expiryDate: '2027-06-30', batchNumber: 'PAR2025A', location: 'Entrepôt A', status: 'available', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', lastMovementDate: '2025-02-25', createdAt: '2024-01-15' },
+  { id: 'cat2', code: 'AMX-250', name: 'Amoxicilline 250mg', category: 'Antibiotiques', description: 'Antibiotique à large spectre', price: 4500, costPrice: 3200, stockQuantity: 2500, minStock: 300, maxStock: 5000, unit: 'boîte', expiryDate: '2026-12-31', batchNumber: 'AMX2025B', location: 'Entrepôt A', status: 'available', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', lastMovementDate: '2025-02-24', createdAt: '2024-02-20' },
+  { id: 'cat3', code: 'IBU-400', name: 'Ibuprofène 400mg', category: 'Anti-inflammatoires', description: 'Anti-inflammatoire non stéroïdien', price: 3200, costPrice: 2200, stockQuantity: 3200, minStock: 400, maxStock: 6000, unit: 'boîte', expiryDate: '2027-03-15', batchNumber: 'IBU2025A', location: 'Entrepôt A', status: 'available', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', lastMovementDate: '2025-02-26', createdAt: '2024-03-10' },
+  { id: 'cat4', code: 'VTC-1000', name: 'Vitamine C 1000mg', category: 'Vitamines', description: 'Complément alimentaire', price: 1800, costPrice: 1000, stockQuantity: 8000, minStock: 1000, maxStock: 15000, unit: 'tube', expiryDate: '2026-09-30', batchNumber: 'VTC2025C', location: 'Entrepôt B', status: 'available', supplierId: 'supp1', supplierName: 'PharmaPlus SARL', lastMovementDate: '2025-02-27', createdAt: '2024-04-05' },
+  { id: 'cat5', code: 'CRD-100', name: 'CardioRelax', category: 'Cardiologie', description: 'Traitement cardiovasculaire', price: 12500, costPrice: 8500, stockQuantity: 500, minStock: 100, maxStock: 1000, unit: 'boîte', expiryDate: '2027-01-31', batchNumber: 'CRD2025A', location: 'Entrepôt C', status: 'available', supplierId: 'supp3', supplierName: 'EuroPharm GmbH', lastMovementDate: '2025-02-20', createdAt: '2024-05-15' },
+]
+
+// ============================================
+// AVATAR PERSISTENCE
+// ============================================
+
+const AVATAR_STORAGE_KEY = 'pharmaLink_avatars'
+
+function getStoredAvatar(accountId: string): string | undefined {
+  try {
+    const stored = localStorage.getItem(AVATAR_STORAGE_KEY)
+    if (stored) {
+      const avatars = JSON.parse(stored)
+      return avatars[accountId]
+    }
+  } catch {}
+  return undefined
+}
+
+function setStoredAvatar(accountId: string, avatarUrl: string) {
+  try {
+    const stored = localStorage.getItem(AVATAR_STORAGE_KEY)
+    const avatars = stored ? JSON.parse(stored) : {}
+    avatars[accountId] = avatarUrl
+    localStorage.setItem(AVATAR_STORAGE_KEY, JSON.stringify(avatars))
+  } catch {}
+}
+
+// ============================================
+// PORTAIL FOURNISSEUR
+// ============================================
+
+function SupplierPortal({ account, onLogout, onUpdateAvatar }: { account: SupplierAccount; onLogout: () => void; onUpdateAvatar: (url: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'orders' | 'invoices' | 'documents' | 'profile'>('dashboard')
+  const [selectedOrder, setSelectedOrder] = useState<SupplierOrder | null>(null)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [showUserMenu, setShowUserMenu] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [showAvatarInput, setShowAvatarInput] = useState(false)
+  
+  const currentAvatar = account.avatar
+  
+  const handleSaveAvatar = () => {
+    if (avatarUrl.trim()) {
+      onUpdateAvatar(avatarUrl.trim())
+      setShowAvatarInput(false)
+    }
+  }
+  
+  const myOrders = supplierOrders.filter(o => o.supplierId === account.supplierId)
+  const myInvoices = supplierInvoices.filter(i => i.supplierId === account.supplierId)
+  
+  const stats = {
+    pendingOrders: myOrders.filter(o => o.status === 'pending').length,
+    activeOrders: myOrders.filter(o => ['confirmed', 'processing', 'shipped'].includes(o.status)).length,
+    deliveredOrders: myOrders.filter(o => o.status === 'delivered').length,
+    totalRevenue: myInvoices.filter(i => i.status === 'paid').reduce((sum, i) => sum + i.total, 0),
+    pendingPayment: myInvoices.filter(i => i.status === 'sent').reduce((sum, i) => sum + i.total, 0),
+    totalOrders: myOrders.length
+  }
+
+  const notifications = [
+    { id: 1, title: 'Nouvelle commande', message: 'PO-2025-005 reçue', time: 'Il y a 1h', read: false },
+    { id: 2, title: 'Paiement reçu', message: 'Facture FAC-F-2025-001 payée', time: 'Hier', read: true },
+  ]
+  
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { bg: string; text: string }> = {
+      pending: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
+      confirmed: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
+      processing: { bg: 'bg-violet-50 border-violet-200', text: 'text-violet-700' },
+      shipped: { bg: 'bg-indigo-50 border-indigo-200', text: 'text-indigo-700' },
+      delivered: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+      cancelled: { bg: 'bg-red-50 border-red-200', text: 'text-red-700' },
+      paid: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+      sent: { bg: 'bg-orange-50 border-orange-200', text: 'text-orange-700' },
+    }
+    const labels: Record<string, string> = {
+      pending: 'En attente', confirmed: 'Confirmée', processing: 'En traitement',
+      shipped: 'Expédiée', delivered: 'Livrée', cancelled: 'Annulée', paid: 'Payée', sent: 'Envoyée'
+    }
+    const c = config[status] || { bg: 'bg-gray-50 border-gray-200', text: 'text-gray-700' }
+    return <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${c.bg} ${c.text}`}>{labels[status] || status}</span>
+  }
+
+  const menuItems = [
+    { id: 'dashboard', label: 'Tableau de bord', icon: BarChart3 },
+    { id: 'orders', label: 'Commandes', icon: Package, badge: stats.pendingOrders },
+    { id: 'invoices', label: 'Factures', icon: Receipt },
+    { id: 'documents', label: 'Documents', icon: FileText },
+    { id: 'profile', label: 'Mon Profil', icon: User },
+  ]
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex">
+      {/* Sidebar */}
+      <motion.aside
+        initial={false}
+        animate={{ width: sidebarCollapsed ? 80 : 280 }}
+        className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col fixed h-full z-40 shadow-lg"
+      >
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30">
+              <Building2 className="h-5 w-5 text-white" />
+            </div>
+            {!sidebarCollapsed && (
+              <div>
+                <h1 className="font-bold text-slate-900 dark:text-white">Fournisseur</h1>
+                <p className="text-xs text-slate-500">Portal Pro</p>
+              </div>
+            )}
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex">
+            <ChevronRight className={`h-4 w-4 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+
+        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+          <div className="space-y-1">
+            {menuItems.map((item, i) => (
+              <motion.button
+                key={item.id}
+                initial={{ opacity: 0, x: -20 }}
+                animate={{ opacity: 1, x: 0 }}
+                transition={{ delay: i * 0.05 }}
+                onClick={() => setActiveTab(item.id as typeof activeTab)}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  activeTab === item.id 
+                    ? 'bg-gradient-to-r from-emerald-500 to-teal-500 text-white shadow-lg shadow-emerald-500/30' 
+                    : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}
+              >
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              </motion.button>
+            ))}
+          </div>
+        </nav>
+
+        {/* Logout Button */}
+        <div className="px-3 pb-2">
+          <motion.button
+            initial={{ opacity: 0, x: -20 }}
+            animate={{ opacity: 1, x: 0 }}
+            onClick={onLogout}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800"
+          >
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            {!sidebarCollapsed && <span className="font-medium">Déconnexion</span>}
+          </motion.button>
+        </div>
+
+        {/* User Section */}
+        <div className="p-3 border-t border-slate-200 dark:border-slate-700">
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} p-2 rounded-xl bg-slate-100 dark:bg-slate-700`}>
+            <Avatar className="h-9 w-9 ring-2 ring-emerald-500 ring-offset-2">
+              {currentAvatar && <AvatarImage src={currentAvatar} alt={account.companyName} />}
+              <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white font-bold text-sm">
+                {account.companyName.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{account.companyName}</p>
+                <p className="text-xs text-slate-500 truncate">{account.email}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.aside>
+
+      {/* Main Content */}
+      <div className={`flex-1 transition-all ${sidebarCollapsed ? 'ml-20' : 'ml-[280px]'}`}>
+        <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+          <div className="h-full px-6 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">
+              {menuItems.find(m => m.id === activeTab)?.label}
+            </h2>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="relative" onClick={() => setShowNotifications(!showNotifications)}>
+                <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">
+                    {notifications.filter(n => !n.read).length}
+                  </span>
+                )}
+              </Button>
+              <div className="relative">
+                <button onClick={() => setShowUserMenu(!showUserMenu)} className="flex items-center gap-2 p-1 pr-3 rounded-full hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors">
+                  <Avatar className="h-8 w-8">
+                    {currentAvatar && <AvatarImage src={currentAvatar} alt={account.companyName} />}
+                    <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-xs font-bold">
+                      {account.companyName.substring(0, 2).toUpperCase()}
+                    </AvatarFallback>
+                  </Avatar>
+                </button>
+              </div>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-6">
+          <AnimatePresence mode="wait">
+            {activeTab === 'dashboard' && (
+              <motion.div key="dashboard" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
+                  {[
+                    { label: 'Commandes en attente', value: stats.pendingOrders, icon: Clock, color: 'from-amber-500 to-orange-500' },
+                    { label: 'Commandes actives', value: stats.activeOrders, icon: Truck, color: 'from-blue-500 to-indigo-500' },
+                    { label: 'Revenus totaux', value: `${(stats.totalRevenue / 1000000).toFixed(1)}M`, icon: TrendingUp, color: 'from-emerald-500 to-teal-500' },
+                    { label: 'En attente paiement', value: `${(stats.pendingPayment / 1000000).toFixed(1)}M`, icon: DollarSign, color: 'from-violet-500 to-purple-500' },
+                  ].map((stat, i) => (
+                    <motion.div key={stat.label} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.1 }}>
+                      <Card className="overflow-hidden border-0 shadow-lg">
+                        <CardContent className="p-4">
+                          <div className="flex items-center justify-between">
+                            <div className={`w-12 h-12 rounded-xl bg-gradient-to-br ${stat.color} flex items-center justify-center shadow-lg`}>
+                              <stat.icon className="h-6 w-6 text-white" />
+                            </div>
+                          </div>
+                          <p className="text-2xl font-bold text-slate-900 dark:text-white mt-3">{stat.value}</p>
+                          <p className="text-sm text-slate-500">{stat.label}</p>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+
+                <Card className="border-0 shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Commandes récentes</CardTitle>
+                    <CardDescription>Vos dernières commandes de Prodipharm</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {myOrders.slice(0, 4).map((order, i) => (
+                        <motion.div
+                          key={order.id}
+                          initial={{ opacity: 0, x: -20 }}
+                          animate={{ opacity: 1, x: 0 }}
+                          transition={{ delay: i * 0.05 }}
+                          className="flex items-center gap-4 p-3 rounded-xl bg-slate-50 dark:bg-slate-700/50 hover:bg-slate-100 dark:hover:bg-slate-700 transition-colors cursor-pointer"
+                          onClick={() => setSelectedOrder(order)}
+                        >
+                          <div className="w-10 h-10 rounded-lg bg-gradient-to-br from-emerald-500 to-teal-500 flex items-center justify-center">
+                            <Package className="h-5 w-5 text-white" />
+                          </div>
+                          <div className="flex-1">
+                            <div className="flex items-center gap-2">
+                              <p className="font-semibold text-slate-900 dark:text-white">{order.orderNumber}</p>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            <p className="text-sm text-slate-500">{order.items.length} articles • {order.orderDate}</p>
+                          </div>
+                          <p className="font-bold text-emerald-600">{order.total.toLocaleString()} XAF</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'orders' && (
+              <motion.div key="orders" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="border-0 shadow-lg">
+                  <CardHeader>
+                    <CardTitle>Commandes de Prodipharm</CardTitle>
+                    <CardDescription>Gérez les commandes reçues</CardDescription>
+                  </CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {myOrders.map((order, i) => (
+                        <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                          className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">{order.orderNumber}</p>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            <p className="text-sm text-slate-500">{order.items.length} articles • {order.orderDate}</p>
+                          </div>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{order.total.toLocaleString()} XAF</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'invoices' && (
+              <motion.div key="invoices" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="border-0 shadow-lg">
+                  <CardHeader><CardTitle>Factures</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {myInvoices.map((invoice, i) => (
+                        <motion.div key={invoice.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                          className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">{invoice.invoiceNumber}</p>
+                              {getStatusBadge(invoice.status)}
+                            </div>
+                            <p className="text-sm text-slate-500">Échéance: {invoice.dueDate}</p>
+                          </div>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{invoice.total.toLocaleString()} XAF</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'documents' && (
+              <motion.div key="documents" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="border-0 shadow-lg">
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <FileText className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                      <p className="text-slate-500 font-medium">Aucun document disponible</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-2xl">
+                <Card className="border-0 shadow-lg overflow-hidden">
+                  <div className="h-32 bg-gradient-to-r from-emerald-500 via-teal-500 to-cyan-500" />
+                  <CardContent className="relative pt-0">
+                    <div className="flex flex-col items-center -mt-12 mb-6">
+                      <div className="relative group">
+                        <Avatar className="h-24 w-24 ring-4 ring-white dark:ring-slate-800 shadow-xl">
+                          {currentAvatar && <AvatarImage src={currentAvatar} alt={account.companyName} />}
+                          <AvatarFallback className="bg-gradient-to-br from-emerald-500 to-teal-600 text-white text-2xl font-bold">
+                            {account.companyName.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <button onClick={() => setShowAvatarInput(!showAvatarInput)}
+                          className="absolute bottom-0 right-0 p-1.5 rounded-full bg-emerald-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Camera className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <AnimatePresence>
+                        {showAvatarInput && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="w-full mt-4 space-y-2">
+                            <Input placeholder="URL de la photo de profil..." value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="w-full" />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={handleSaveAvatar} className="flex-1 bg-emerald-500 hover:bg-emerald-600">
+                                <Save className="h-4 w-4 mr-2" />Sauvegarder
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setShowAvatarInput(false); setAvatarUrl('') }}>Annuler</Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-3">{account.companyName}</h3>
+                      <p className="text-slate-500">{account.specialty}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Compte Actif</Badge>
+                      </div>
+                    </div>
+                    <Separator className="mb-6" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-semibold flex items-center gap-2"><Building2 className="h-4 w-4 text-emerald-500" />Informations</h4>
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Contact principal</p>
+                            <p className="font-medium">{account.contactPerson}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Téléphone</p>
+                            <p className="font-medium">{account.phone}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-semibold flex items-center gap-2"><Mail className="h-4 w-4 text-emerald-500" />Contact</h4>
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Email</p>
+                            <p className="font-medium">{account.email}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Adresse</p>
+                            <p className="font-medium">{account.address}, {account.city}</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+    </div>
+  )
+}
+
+// ============================================
+// PORTAIL CLIENT
+// ============================================
+
+function ClientPortal({ account, onLogout, onUpdateAvatar }: { account: ClientAccount; onLogout: () => void; onUpdateAvatar: (url: string) => void }) {
+  const [activeTab, setActiveTab] = useState<'catalog' | 'orders' | 'invoices' | 'profile'>('catalog')
+  const [cart, setCart] = useState<CartItem[]>([])
+  const [searchTerm, setSearchTerm] = useState('')
+  const [selectedCategory, setSelectedCategory] = useState<string>('all')
+  const [showCart, setShowCart] = useState(false)
+  const [sidebarCollapsed, setSidebarCollapsed] = useState(false)
+  const [showNotifications, setShowNotifications] = useState(false)
+  const [avatarUrl, setAvatarUrl] = useState('')
+  const [showAvatarInput, setShowAvatarInput] = useState(false)
+  
+  const currentAvatar = account.avatar
+  
+  const handleSaveAvatar = () => {
+    if (avatarUrl.trim()) {
+      onUpdateAvatar(avatarUrl.trim())
+      setShowAvatarInput(false)
+    }
+  }
+  
+  const myOrders = clientOrders.filter(o => o.clientId === account.clientId)
+  
+  const categories = ['all', ...new Set(clientCatalog.map(p => p.category))]
+  
+  const filteredProducts = clientCatalog.filter(p => {
+    const matchesSearch = p.name.toLowerCase().includes(searchTerm.toLowerCase()) || p.code.toLowerCase().includes(searchTerm.toLowerCase())
+    const matchesCategory = selectedCategory === 'all' || p.category === selectedCategory
+    return matchesSearch && matchesCategory
+  })
+  
+  const cartTotal = cart.reduce((sum, item) => sum + item.total, 0)
+  const cartCount = cart.reduce((sum, item) => sum + item.quantity, 0)
+  
+  const addToCart = (product: PharmaProduct) => {
+    const existing = cart.find(item => item.productId === product.id)
+    if (existing) {
+      setCart(cart.map(item => item.productId === product.id ? { ...item, quantity: item.quantity + 1, total: (item.quantity + 1) * item.unitPrice } : item))
+    } else {
+      setCart([...cart, { id: `cart-${Date.now()}`, productId: product.id, productName: product.name, productCode: product.code, quantity: 1, unitPrice: product.price, total: product.price, stockAvailable: product.stockQuantity }])
+    }
+  }
+  
+  const updateCartQuantity = (productId: string, quantity: number) => {
+    if (quantity <= 0) {
+      setCart(cart.filter(item => item.productId !== productId))
+    } else {
+      setCart(cart.map(item => item.productId === productId ? { ...item, quantity, total: quantity * item.unitPrice } : item))
+    }
+  }
+  
+  const stats = {
+    totalOrders: myOrders.length,
+    pendingOrders: myOrders.filter(o => ['pending', 'processing'].includes(o.status)).length,
+    totalSpent: myOrders.filter(o => o.status === 'delivered').reduce((sum, o) => sum + o.total, 0),
+    availableCredit: account.creditLimit - account.currentBalance
+  }
+
+  const getStatusBadge = (status: string) => {
+    const config: Record<string, { bg: string; text: string }> = {
+      pending: { bg: 'bg-amber-50 border-amber-200', text: 'text-amber-700' },
+      confirmed: { bg: 'bg-blue-50 border-blue-200', text: 'text-blue-700' },
+      processing: { bg: 'bg-violet-50 border-violet-200', text: 'text-violet-700' },
+      shipped: { bg: 'bg-indigo-50 border-indigo-200', text: 'text-indigo-700' },
+      delivered: { bg: 'bg-emerald-50 border-emerald-200', text: 'text-emerald-700' },
+      cancelled: { bg: 'bg-red-50 border-red-200', text: 'text-red-700' }
+    }
+    const labels: Record<string, string> = { pending: 'En attente', confirmed: 'Confirmée', processing: 'En traitement', shipped: 'Expédiée', delivered: 'Livrée', cancelled: 'Annulée' }
+    const c = config[status] || { bg: 'bg-gray-50 border-gray-200', text: 'text-gray-700' }
+    return <span className={`inline-flex items-center gap-1 px-2 py-1 rounded-full text-xs font-medium border ${c.bg} ${c.text}`}>{labels[status] || status}</span>
+  }
+
+  const menuItems = [
+    { id: 'catalog', label: 'Catalogue', icon: Package },
+    { id: 'orders', label: 'Mes Commandes', icon: ClipboardList, badge: stats.pendingOrders },
+    { id: 'invoices', label: 'Factures', icon: Receipt },
+    { id: 'profile', label: 'Mon Profil', icon: User },
+  ]
+
+  const notifications = [
+    { id: 1, title: 'Commande expédiée', message: 'CMD-2025-002 est en route', time: 'Il y a 2h', read: false },
+  ]
+
+  return (
+    <div className="min-h-screen bg-slate-50 dark:bg-slate-900 flex">
+      {/* Sidebar */}
+      <motion.aside initial={false} animate={{ width: sidebarCollapsed ? 80 : 280 }}
+        className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col fixed h-full z-40 shadow-lg">
+        <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
+          <div className="flex items-center gap-3">
+            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30">
+              <ShoppingCart className="h-5 w-5 text-white" />
+            </div>
+            {!sidebarCollapsed && <div><h1 className="font-bold text-slate-900 dark:text-white">Client</h1><p className="text-xs text-slate-500">Portal Pro</p></div>}
+          </div>
+          <Button variant="ghost" size="icon" onClick={() => setSidebarCollapsed(!sidebarCollapsed)} className="hidden lg:flex">
+            <ChevronRight className={`h-4 w-4 transition-transform ${sidebarCollapsed ? 'rotate-180' : ''}`} />
+          </Button>
+        </div>
+
+        <nav className="flex-1 py-4 px-3 overflow-y-auto">
+          <div className="space-y-1">
+            {menuItems.map((item, i) => (
+              <motion.button key={item.id} initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} transition={{ delay: i * 0.05 }}
+                onClick={() => setActiveTab(item.id as typeof activeTab)}
+                className={`w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all ${
+                  activeTab === item.id ? 'bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30' : 'text-slate-600 dark:text-slate-400 hover:bg-slate-100 dark:hover:bg-slate-700'
+                }`}>
+                <item.icon className="h-5 w-5 flex-shrink-0" />
+                {!sidebarCollapsed && <span className="font-medium">{item.label}</span>}
+              </motion.button>
+            ))}
+          </div>
+        </nav>
+
+        {/* Cart Button */}
+        {!sidebarCollapsed && (
+          <div className="px-3 pb-2">
+            <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} onClick={() => setShowCart(true)}
+              className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all bg-gradient-to-r from-blue-500 to-indigo-500 text-white shadow-lg shadow-blue-500/30">
+              <ShoppingCart className="h-5 w-5 flex-shrink-0" />
+              <span className="font-medium">Panier</span>
+              {cartCount > 0 && <span className="ml-auto px-2 py-0.5 rounded-full text-xs font-bold bg-white/20">{cartCount}</span>}
+            </motion.button>
+          </div>
+        )}
+
+        {/* Logout */}
+        <div className="px-3 pb-2">
+          <motion.button initial={{ opacity: 0, x: -20 }} animate={{ opacity: 1, x: 0 }} onClick={onLogout}
+            className="w-full flex items-center gap-3 px-3 py-3 rounded-xl transition-all text-red-600 hover:bg-red-50 dark:hover:bg-red-900/20 border border-red-200 dark:border-red-800">
+            <LogOut className="h-5 w-5 flex-shrink-0" />
+            {!sidebarCollapsed && <span className="font-medium">Déconnexion</span>}
+          </motion.button>
+        </div>
+
+        {/* User Section */}
+        <div className="p-3 border-t border-slate-200 dark:border-slate-700">
+          <div className={`flex items-center ${sidebarCollapsed ? 'justify-center' : 'gap-3'} p-2 rounded-xl bg-slate-100 dark:bg-slate-700`}>
+            <Avatar className="h-9 w-9 ring-2 ring-blue-500 ring-offset-2">
+              {currentAvatar && <AvatarImage src={currentAvatar} alt={account.companyName} />}
+              <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white font-bold text-sm">
+                {account.companyName.substring(0, 2).toUpperCase()}
+              </AvatarFallback>
+            </Avatar>
+            {!sidebarCollapsed && (
+              <div className="flex-1 min-w-0">
+                <p className="text-sm font-semibold text-slate-900 dark:text-white truncate">{account.companyName}</p>
+                <p className="text-xs text-slate-500 truncate">{account.email}</p>
+              </div>
+            )}
+          </div>
+        </div>
+      </motion.aside>
+
+      {/* Main Content */}
+      <div className={`flex-1 transition-all ${sidebarCollapsed ? 'ml-20' : 'ml-[280px]'}`}>
+        <header className="h-16 bg-white/80 dark:bg-slate-800/80 backdrop-blur-md border-b border-slate-200 dark:border-slate-700 sticky top-0 z-30">
+          <div className="h-full px-6 flex items-center justify-between">
+            <h2 className="text-lg font-bold text-slate-900 dark:text-white">{menuItems.find(m => m.id === activeTab)?.label}</h2>
+            <div className="flex items-center gap-3">
+              <Button variant="ghost" size="icon" className="relative" onClick={() => setShowNotifications(!showNotifications)}>
+                <Bell className="h-5 w-5 text-slate-600 dark:text-slate-400" />
+                {notifications.filter(n => !n.read).length > 0 && (
+                  <span className="absolute -top-1 -right-1 w-5 h-5 bg-red-500 text-white text-xs rounded-full flex items-center justify-center">{notifications.filter(n => !n.read).length}</span>
+                )}
+              </Button>
+              <Button variant="outline" className="relative gap-2" onClick={() => setShowCart(true)}>
+                <ShoppingCart className="h-4 w-4" />Panier
+                {cartCount > 0 && <span className="absolute -top-2 -right-2 w-5 h-5 bg-blue-500 text-white text-xs rounded-full flex items-center justify-center">{cartCount}</span>}
+              </Button>
+            </div>
+          </div>
+        </header>
+
+        <main className="p-6">
+          <AnimatePresence mode="wait">
+            {activeTab === 'catalog' && (
+              <motion.div key="catalog" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="space-y-6">
+                <div className="flex flex-col sm:flex-row gap-4">
+                  <div className="relative flex-1">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-slate-400" />
+                    <Input placeholder="Rechercher un produit..." value={searchTerm} onChange={(e) => setSearchTerm(e.target.value)} className="pl-10" />
+                  </div>
+                  <select value={selectedCategory} onChange={(e) => setSelectedCategory(e.target.value)}
+                    className="px-4 py-2 rounded-lg border border-slate-200 dark:border-slate-700 bg-white dark:bg-slate-800">
+                    {categories.map(cat => <option key={cat} value={cat}>{cat === 'all' ? 'Toutes catégories' : cat}</option>)}
+                  </select>
+                </div>
+
+                <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                  {filteredProducts.map((product, i) => (
+                    <motion.div key={product.id} initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}>
+                      <Card className="border-0 shadow-lg hover:shadow-xl transition-shadow">
+                        <CardContent className="p-4">
+                          <div className="flex items-start justify-between mb-3">
+                            <div>
+                              <p className="text-xs text-slate-500 font-mono">{product.code}</p>
+                              <h3 className="font-semibold text-slate-900 dark:text-white">{product.name}</h3>
+                            </div>
+                            <Badge variant="secondary" className="text-xs">{product.category}</Badge>
+                          </div>
+                          <p className="text-sm text-slate-500 mb-3">{product.description}</p>
+                          <div className="flex items-center justify-between">
+                            <div>
+                              <p className="text-lg font-bold text-blue-600">{product.price.toLocaleString()} XAF</p>
+                              <p className="text-xs text-slate-500">Stock: {product.stockQuantity}</p>
+                            </div>
+                            <Button size="sm" onClick={() => addToCart(product)} className="bg-blue-500 hover:bg-blue-600">
+                              <Plus className="h-4 w-4 mr-1" />Ajouter
+                            </Button>
+                          </div>
+                        </CardContent>
+                      </Card>
+                    </motion.div>
+                  ))}
+                </div>
+              </motion.div>
+            )}
+
+            {activeTab === 'orders' && (
+              <motion.div key="orders" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="border-0 shadow-lg">
+                  <CardHeader><CardTitle>Mes Commandes</CardTitle></CardHeader>
+                  <CardContent>
+                    <div className="space-y-3">
+                      {myOrders.map((order, i) => (
+                        <motion.div key={order.id} initial={{ opacity: 0, y: 10 }} animate={{ opacity: 1, y: 0 }} transition={{ delay: i * 0.05 }}
+                          className="flex items-center gap-4 p-4 rounded-xl border border-slate-200 dark:border-slate-700">
+                          <div className="flex-1">
+                            <div className="flex items-center gap-3 mb-1">
+                              <p className="font-semibold text-slate-900 dark:text-white">{order.orderNumber}</p>
+                              {getStatusBadge(order.status)}
+                            </div>
+                            <p className="text-sm text-slate-500">{order.items.length} articles • {order.orderDate}</p>
+                          </div>
+                          <p className="text-lg font-bold text-slate-900 dark:text-white">{order.total.toLocaleString()} XAF</p>
+                        </motion.div>
+                      ))}
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'invoices' && (
+              <motion.div key="invoices" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }}>
+                <Card className="border-0 shadow-lg">
+                  <CardContent className="py-12">
+                    <div className="text-center">
+                      <Receipt className="h-16 w-16 mx-auto text-slate-300 mb-4" />
+                      <p className="text-slate-500 font-medium">Aucune facture disponible</p>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+
+            {activeTab === 'profile' && (
+              <motion.div key="profile" initial={{ opacity: 0, y: 20 }} animate={{ opacity: 1, y: 0 }} exit={{ opacity: 0, y: -20 }} className="max-w-2xl">
+                <Card className="border-0 shadow-lg overflow-hidden">
+                  <div className="h-32 bg-gradient-to-r from-blue-500 via-indigo-500 to-violet-500" />
+                  <CardContent className="relative pt-0">
+                    <div className="flex flex-col items-center -mt-12 mb-6">
+                      <div className="relative group">
+                        <Avatar className="h-24 w-24 ring-4 ring-white dark:ring-slate-800 shadow-xl">
+                          {currentAvatar && <AvatarImage src={currentAvatar} alt={account.companyName} />}
+                          <AvatarFallback className="bg-gradient-to-br from-blue-500 to-indigo-600 text-white text-2xl font-bold">
+                            {account.companyName.substring(0, 2).toUpperCase()}
+                          </AvatarFallback>
+                        </Avatar>
+                        <button onClick={() => setShowAvatarInput(!showAvatarInput)}
+                          className="absolute bottom-0 right-0 p-1.5 rounded-full bg-blue-500 text-white shadow-lg opacity-0 group-hover:opacity-100 transition-opacity">
+                          <Camera className="h-4 w-4" />
+                        </button>
+                      </div>
+                      <AnimatePresence>
+                        {showAvatarInput && (
+                          <motion.div initial={{ opacity: 0, height: 0 }} animate={{ opacity: 1, height: 'auto' }} exit={{ opacity: 0, height: 0 }} className="w-full mt-4 space-y-2">
+                            <Input placeholder="URL de la photo de profil..." value={avatarUrl} onChange={(e) => setAvatarUrl(e.target.value)} className="w-full" />
+                            <div className="flex gap-2">
+                              <Button size="sm" onClick={handleSaveAvatar} className="flex-1 bg-blue-500 hover:bg-blue-600">
+                                <Save className="h-4 w-4 mr-2" />Sauvegarder
+                              </Button>
+                              <Button size="sm" variant="outline" onClick={() => { setShowAvatarInput(false); setAvatarUrl('') }}>Annuler</Button>
+                            </div>
+                          </motion.div>
+                        )}
+                      </AnimatePresence>
+                      <h3 className="text-xl font-bold text-slate-900 dark:text-white mt-3">{account.companyName}</h3>
+                      <p className="text-slate-500 capitalize">{account.type}</p>
+                      <div className="flex items-center gap-2 mt-2">
+                        <Badge className="bg-blue-100 text-blue-700 border-blue-200">Catégorie {account.category}</Badge>
+                        <Badge className="bg-emerald-100 text-emerald-700 border-emerald-200">Compte Actif</Badge>
+                      </div>
+                    </div>
+                    <Separator className="mb-6" />
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <h4 className="font-semibold flex items-center gap-2"><Building2 className="h-4 w-4 text-blue-500" />Informations</h4>
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Contact principal</p>
+                            <p className="font-medium">{account.contactPerson}</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Téléphone</p>
+                            <p className="font-medium">{account.phone}</p>
+                          </div>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <h4 className="font-semibold flex items-center gap-2"><DollarSign className="h-4 w-4 text-blue-500" />Crédit</h4>
+                        <div className="space-y-3">
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Limite de crédit</p>
+                            <p className="font-medium">{account.creditLimit.toLocaleString()} XAF</p>
+                          </div>
+                          <div className="p-3 rounded-lg bg-slate-50 dark:bg-slate-700/50">
+                            <p className="text-xs text-slate-500 mb-1">Solde actuel</p>
+                            <p className="font-medium">{account.currentBalance.toLocaleString()} XAF</p>
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                  </CardContent>
+                </Card>
+              </motion.div>
+            )}
+          </AnimatePresence>
+        </main>
+      </div>
+
+      {/* Cart Sidebar */}
+      <AnimatePresence>
+        {showCart && (
+          <>
+            <motion.div initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }} className="fixed inset-0 bg-black/50 z-50" onClick={() => setShowCart(false)} />
+            <motion.div initial={{ x: '100%' }} animate={{ x: 0 }} exit={{ x: '100%' }} transition={{ type: 'spring', damping: 20 }}
+              className="fixed right-0 top-0 h-full w-full max-w-md bg-white dark:bg-slate-800 shadow-xl z-50 flex flex-col">
+              <div className="p-4 border-b border-slate-200 dark:border-slate-700 flex items-center justify-between">
+                <h2 className="text-lg font-bold">Mon Panier</h2>
+                <Button variant="ghost" size="icon" onClick={() => setShowCart(false)}><X className="h-4 w-4" /></Button>
+              </div>
+              <div className="flex-1 overflow-auto p-4">
+                {cart.length === 0 ? (
+                  <div className="text-center py-8 text-slate-500"><ShoppingCart className="h-12 w-12 mx-auto mb-4 opacity-50" /><p>Votre panier est vide</p></div>
+                ) : (
+                  <div className="space-y-4">
+                    {cart.map(item => (
+                      <div key={item.id} className="flex items-center gap-3 p-3 bg-slate-50 dark:bg-slate-700/50 rounded-lg">
+                        <div className="flex-1">
+                          <p className="font-medium">{item.productName}</p>
+                          <p className="text-sm text-slate-500">{item.unitPrice.toLocaleString()} XAF/u</p>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.productId, item.quantity - 1)}><X className="h-3 w-3" /></Button>
+                          <span className="w-8 text-center">{item.quantity}</span>
+                          <Button variant="outline" size="icon" className="h-8 w-8" onClick={() => updateCartQuantity(item.productId, item.quantity + 1)}><Plus className="h-3 w-3" /></Button>
+                        </div>
+                        <p className="font-bold w-24 text-right text-blue-600">{item.total.toLocaleString()} XAF</p>
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+              {cart.length > 0 && (
+                <div className="p-4 border-t border-slate-200 dark:border-slate-700">
+                  <div className="flex items-center justify-between mb-4">
+                    <p className="font-semibold">Total</p>
+                    <p className="text-xl font-bold text-blue-600">{cartTotal.toLocaleString()} XAF</p>
+                  </div>
+                  <Button className="w-full bg-gradient-to-r from-blue-500 to-indigo-500" size="lg">
+                    <Send className="h-4 w-4 mr-2" />Passer la commande
+                  </Button>
+                </div>
+              )}
+            </motion.div>
+          </>
+        )}
+      </AnimatePresence>
+    </div>
+  )
+}
+
+// ============================================
 // MAIN APP
 // ============================================
 
@@ -13010,6 +14046,33 @@ export default function PharmaLinkApp() {
   }
 
   if (!user) return <LoginScreen onLogin={setUser} />
+
+  // Gérer les portails externes (fournisseurs et clients)
+  if (user.role === 'fournisseur') {
+    const baseAccount = supplierAccounts.find(s => s.id === user.id) || supplierAccounts[0]
+    const storedAvatar = typeof window !== 'undefined' ? getStoredAvatar(baseAccount.id) : undefined
+    const supplierAccount = { ...baseAccount, avatar: storedAvatar || baseAccount.avatar }
+    return (
+      <SupplierPortal 
+        account={supplierAccount} 
+        onLogout={logout} 
+        onUpdateAvatar={(url) => setStoredAvatar(baseAccount.id, url)} 
+      />
+    )
+  }
+
+  if (user.role === 'client') {
+    const baseAccount = clientAccounts.find(c => c.id === user.id) || clientAccounts[0]
+    const storedAvatar = typeof window !== 'undefined' ? getStoredAvatar(baseAccount.id) : undefined
+    const clientAccount = { ...baseAccount, avatar: storedAvatar || baseAccount.avatar }
+    return (
+      <ClientPortal 
+        account={clientAccount} 
+        onLogout={logout} 
+        onUpdateAvatar={(url) => setStoredAvatar(baseAccount.id, url)} 
+      />
+    )
+  }
 
   const menuItems = [
     { id: 'dashboard' as Module, label: 'Tableau de bord', icon: BarChart3, roles: ['dm', 'superviseur', 'comptabilite', 'marketing', 'admin'] },
