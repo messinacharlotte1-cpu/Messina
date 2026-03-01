@@ -1144,6 +1144,63 @@ const statusLabels = {
 // LOGIN SCREEN - DEUX COLONNES
 // ============================================
 
+// Pays disponibles
+const COUNTRIES = [
+  { 
+    id: 'cameroun', 
+    name: 'Cameroun', 
+    label: 'Cameroun (Siège social)', 
+    flagSvg: (
+      <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
+        <rect fill="#007A5E" width="15" height="30"/>
+        <rect fill="#CE1126" x="15" width="15" height="30"/>
+        <rect fill="#FCD116" x="30" width="15" height="30"/>
+        <polygon fill="#FCD116" points="22.5,11.5 23.4,14.3 26.3,14.3 24,16 24.9,18.8 22.5,17.1 20.1,18.8 21,16 18.7,14.3 21.6,14.3" stroke="#007A5E" strokeWidth="0.3"/>
+      </svg>
+    ),
+    color: 'from-green-500 to-yellow-500' 
+  },
+  { 
+    id: 'gabon', 
+    name: 'Gabon', 
+    label: 'Gabon', 
+    flagSvg: (
+      <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
+        <rect fill="#009A49" width="45" height="10"/>
+        <rect fill="#FFD700" y="10" width="45" height="10"/>
+        <rect fill="#003893" y="20" width="45" height="10"/>
+      </svg>
+    ),
+    color: 'from-blue-500 to-green-500' 
+  },
+  { 
+    id: 'congo', 
+    name: 'Congo', 
+    label: 'Congo', 
+    flagSvg: (
+      <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
+        <polygon fill="#009543" points="0,0 45,0 45,30"/>
+        <polygon fill="#FBDE4A" points="0,0 45,30 0,30"/>
+        <polygon fill="#DC0000" points="0,0 0,30 22.5,15"/>
+      </svg>
+    ),
+    color: 'from-red-500 to-yellow-500' 
+  },
+  { 
+    id: 'tchad', 
+    name: 'Tchad', 
+    label: 'Tchad', 
+    flagSvg: (
+      <svg viewBox="0 0 45 30" className="w-6 h-4 rounded-sm overflow-hidden">
+        <rect fill="#002664" width="15" height="30"/>
+        <rect fill="#FCD116" x="15" width="15" height="30"/>
+        <rect fill="#CE1126" x="30" width="15" height="30"/>
+      </svg>
+    ),
+    color: 'from-blue-500 to-red-500' 
+  },
+]
+
 function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
@@ -1151,6 +1208,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
   const [error, setError] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [selectedPortal, setSelectedPortal] = useState<'interne' | 'fournisseur' | 'client'>('interne')
+  const [selectedCountry, setSelectedCountry] = useState<string>('cameroun')
   const { toast } = useToast()
 
   const handleLogin = async (e: React.FormEvent) => {
@@ -1163,11 +1221,18 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
     }
 
     setIsLoading(true)
+    
+    // Récupérer le pays sélectionné
+    const countryObj = COUNTRIES.find(c => c.id === selectedCountry)
+    const countryName = countryObj?.name || 'Cameroun'
 
     setTimeout(() => {
       // Vérifier le type de portail et les identifiants
       if (selectedPortal === 'fournisseur') {
-        const supplier = supplierAccounts.find(s => s.email.toLowerCase() === email.toLowerCase())
+        const supplier = supplierAccounts.find(s => 
+          s.email.toLowerCase() === email.toLowerCase() && 
+          s.country.toLowerCase() === countryName.toLowerCase()
+        )
         if (supplier) {
           onLogin({
             id: supplier.id,
@@ -1178,11 +1243,14 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
             country: supplier.country
           })
           setIsLoading(false)
-          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Fournisseur!` })
+          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Fournisseur ${countryName}!` })
           return
         }
       } else if (selectedPortal === 'client') {
-        const client = clientAccounts.find(c => c.email.toLowerCase() === email.toLowerCase())
+        const client = clientAccounts.find(c => 
+          c.email.toLowerCase() === email.toLowerCase() && 
+          c.country.toLowerCase() === countryName.toLowerCase()
+        )
         if (client) {
           onLogin({
             id: client.id,
@@ -1193,7 +1261,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
             country: client.country
           })
           setIsLoading(false)
-          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Client!` })
+          toast({ title: 'Connexion réussie', description: `Bienvenue sur le Portail Client ${countryName}!` })
           return
         }
       } else {
@@ -1204,20 +1272,26 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
         else if (email.includes('compta') || email.includes('finance')) role = 'comptabilite'
         else if (email.includes('marketing')) role = 'marketing'
 
+        // Définir la région en fonction du pays
+        let region = 'Douala'
+        if (selectedCountry === 'gabon') region = 'Libreville'
+        else if (selectedCountry === 'congo') region = 'Brazzaville'
+        else if (selectedCountry === 'tchad') region = 'N\'Djamena'
+
         onLogin({
           id: 'user-' + Date.now(),
           name: email.split('@')[0].replace('.', ' ').replace(/\b\w/g, c => c.toUpperCase()),
           email: email,
           role: role,
-          region: 'Douala',
-          country: 'Cameroun'
+          region: region,
+          country: countryName
         })
         setIsLoading(false)
-        toast({ title: 'Connexion réussie', description: 'Bienvenue sur PharmaLink!' })
+        toast({ title: 'Connexion réussie', description: `Bienvenue sur PharmaLink ${countryName}!` })
         return
       }
       
-      setError('Identifiants incorrects')
+      setError('Identifiants incorrects pour ce pays')
       setIsLoading(false)
     }, 800)
   }
@@ -1230,27 +1304,79 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
     { icon: TrendingUp, value: '98%', label: 'Disponibilité' }
   ]
   
-  // Identifiants de test selon le portail
-  const testCredentials = {
-    interne: [
-      { role: 'Admin', email: 'admin@prodipharm.com' },
-      { role: 'Superviseur', email: 'superviseur@prodipharm.com' },
-      { role: 'DM', email: 'jean.moussombi@prodipharm.com' },
-      { role: 'Compta', email: 'compta@prodipharm.com' }
-    ],
-    fournisseur: [
-      { role: 'PharmaPlus', email: 'marc@pharmaplus.cm' },
-      { role: 'Afrique Santé', email: 'aminata@afriquesante.sn' },
-      { role: 'EuroPharm', email: 'h.mueller@europharm.de' },
-      { role: 'India Pharma', email: 'raj@indiapharma.in' }
-    ],
-    client: [
-      { role: 'Pharmacie Centre', email: 'pharmacie.centre@email.cm' },
-      { role: 'Clinique Espérance', email: 'clinique.esperance@email.cm' },
-      { role: 'Hôpital Central', email: 'hopital.central@email.cm' },
-      { role: 'Dr. Nkodo', email: 'nkodo@email.cm' }
-    ]
+  // Identifiants de test selon le portail et le pays
+  const getTestCredentials = () => {
+    const baseCredentials: Record<string, Record<string, Array<{role: string, email: string}>>> = {
+      cameroun: {
+        interne: [
+          { role: 'Admin', email: 'admin.cm@prodipharm.com' },
+          { role: 'Superviseur', email: 'superviseur.cm@prodipharm.com' },
+          { role: 'DM', email: 'jean.moussombi@prodipharm.cm' },
+          { role: 'Compta', email: 'compta.cm@prodipharm.com' }
+        ],
+        fournisseur: [
+          { role: 'PharmaPlus CM', email: 'marc@pharmaplus.cm' },
+          { role: 'CamerPharm', email: 'paul@camerpharm.cm' }
+        ],
+        client: [
+          { role: 'Pharmacie Centre', email: 'pharmacie.centre@email.cm' },
+          { role: 'Clinique Espérance', email: 'clinique.esperance@email.cm' }
+        ]
+      },
+      gabon: {
+        interne: [
+          { role: 'Admin', email: 'admin.ga@prodipharm.com' },
+          { role: 'Superviseur', email: 'superviseur.ga@prodipharm.com' },
+          { role: 'DM', email: 'pierre.mba@prodipharm.ga' },
+          { role: 'Compta', email: 'compta.ga@prodipharm.com' }
+        ],
+        fournisseur: [
+          { role: 'Gabon Pharma', email: 'ngoua@gabonpharma.ga' },
+          { role: 'Libreville Med', email: 'contact@librevilledmed.ga' }
+        ],
+        client: [
+          { role: 'Pharmacie Libreville', email: 'pharmacie.libreville@email.ga' },
+          { role: 'Hôpital Owendo', email: 'hopital.owendo@email.ga' }
+        ]
+      },
+      congo: {
+        interne: [
+          { role: 'Admin', email: 'admin.cg@prodipharm.com' },
+          { role: 'Superviseur', email: 'superviseur.cg@prodipharm.com' },
+          { role: 'DM', email: 'antoine.massamba@prodipharm.cg' },
+          { role: 'Compta', email: 'compta.cg@prodipharm.com' }
+        ],
+        fournisseur: [
+          { role: 'Congo Pharma', email: 'moussa@congopharma.cg' },
+          { role: 'Brazza Med', email: 'contact@brazzamed.cg' }
+        ],
+        client: [
+          { role: 'Pharmacie Brazza', email: 'pharmacie.brazza@email.cg' },
+          { role: 'Hôpital Central', email: 'hopital.central@email.cg' }
+        ]
+      },
+      tchad: {
+        interne: [
+          { role: 'Admin', email: 'admin.td@prodipharm.com' },
+          { role: 'Superviseur', email: 'superviseur.td@prodipharm.com' },
+          { role: 'DM', email: 'ibrahim.hissein@prodipharm.td' },
+          { role: 'Compta', email: 'compta.td@prodipharm.com' }
+        ],
+        fournisseur: [
+          { role: 'Tchad Pharma', email: 'hassan@tchadpharma.td' },
+          { role: 'N\'Djamena Med', email: 'contact@ndjamenamed.td' }
+        ],
+        client: [
+          { role: 'Pharmacie N\'Djamena', email: 'pharmacie.ndjamena@email.td' },
+          { role: 'Hôpital Central', email: 'hopital.ndjamena@email.td' }
+        ]
+      }
+    }
+    
+    return baseCredentials[selectedCountry]?.[selectedPortal] || baseCredentials.cameroun.interne
   }
+  
+  const testCredentials = getTestCredentials()
 
   return (
     <div className="min-h-screen flex">
@@ -1354,6 +1480,30 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
             <div className="mb-8">
               <h2 className="text-2xl font-bold mb-2">Bienvenue</h2>
               <p className="text-muted-foreground">Connectez-vous à votre espace de travail</p>
+            </div>
+
+            {/* Sélecteur de pays */}
+            <div className="mb-4">
+              <Label className="text-sm font-medium mb-2 block">Sélectionnez votre pays</Label>
+              <div className="grid grid-cols-2 gap-2">
+                {COUNTRIES.map((country) => (
+                  <button
+                    key={country.id}
+                    type="button"
+                    onClick={() => setSelectedCountry(country.id)}
+                    className={`flex items-center gap-2 p-3 rounded-xl border-2 transition-all ${
+                      selectedCountry === country.id 
+                        ? 'border-primary bg-primary/5 shadow-md' 
+                        : 'border-muted hover:border-muted-foreground/30'
+                    }`}
+                  >
+                    <span className="flex-shrink-0 shadow-sm">{country.flagSvg}</span>
+                    <div className="text-left flex-1 min-w-0">
+                      <span className="text-xs font-medium block truncate">{country.label}</span>
+                    </div>
+                  </button>
+                ))}
+              </div>
             </div>
 
             {/* Sélecteur de portail */}
@@ -1466,7 +1616,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
                 <div className="mt-6 pt-4 border-t">
                   <p className="text-sm text-muted-foreground mb-3">Identifiants de test :</p>
                   <div className="grid grid-cols-2 gap-2">
-                    {testCredentials[selectedPortal].map((item, i) => (
+                    {testCredentials.map((item, i) => (
                       <button
                         key={i}
                         type="button"
@@ -13134,19 +13284,35 @@ interface SupplierInvoice {
 
 // Comptes fournisseurs pour le portail
 const supplierAccounts: SupplierAccount[] = [
+  // Cameroun (Siège social)
   { id: 'sup_acc1', supplierId: 'supp1', companyName: 'PharmaPlus SARL', contactPerson: 'Marc Tchouamo', email: 'marc@pharmaplus.cm', phone: '+237 699 111 222', address: 'Zone Industrielle', city: 'Douala', country: 'Cameroun', specialty: 'Médicaments génériques', status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-26', createdAt: '2024-06-15' },
-  { id: 'sup_acc2', supplierId: 'supp2', companyName: 'Afrique Santé Import', contactPerson: 'Aminata Diallo', email: 'aminata@afriquesante.sn', phone: '+221 77 333 444', address: 'Dakar Plateau', city: 'Dakar', country: 'Sénégal', specialty: 'Dispositifs médicaux', status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-25', createdAt: '2024-08-20' },
-  { id: 'sup_acc3', supplierId: 'supp3', companyName: 'EuroPharm GmbH', contactPerson: 'Hans Mueller', email: 'h.mueller@europharm.de', phone: '+49 30 1234 5678', address: 'Industriestraße 45', city: 'Berlin', country: 'Allemagne', specialty: 'Spécialités pharmaceutiques', status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', createdAt: '2024-01-10' },
-  { id: 'sup_acc4', supplierId: 'supp4', companyName: 'India Pharma Exports', contactPerson: 'Raj Patel', email: 'raj@indiapharma.in', phone: '+91 98 7654 3210', address: 'Mumbai Industrial Zone', city: 'Mumbai', country: 'Inde', specialty: 'API et principes actifs', status: 'active', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-24', createdAt: '2024-03-22' },
+  { id: 'sup_acc1b', supplierId: 'supp1b', companyName: 'CamerPharm SA', contactPerson: 'Paul Mbarga', email: 'paul@camerpharm.cm', phone: '+237 677 222 333', address: 'Quartier Akwa', city: 'Douala', country: 'Cameroun', specialty: 'Médicaments génériques', status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-25', createdAt: '2024-05-10' },
+  // Gabon
+  { id: 'sup_acc2', supplierId: 'supp2', companyName: 'Gabon Pharma SARL', contactPerson: 'Pierre Ngoua', email: 'ngoua@gabonpharma.ga', phone: '+241 66 123 456', address: 'Boulevard Triomphal', city: 'Libreville', country: 'Gabon', specialty: 'Dispositifs médicaux', status: 'active', avatar: 'https://images.unsplash.com/photo-1494790108377-be9c29b29330?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-25', createdAt: '2024-08-20' },
+  { id: 'sup_acc2b', supplierId: 'supp2b', companyName: 'Libreville Med', contactPerson: 'Marie Mba', email: 'contact@librevilledmed.ga', phone: '+241 74 987 654', address: 'Quartier Glass', city: 'Libreville', country: 'Gabon', specialty: 'Équipements médicaux', status: 'active', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-24', createdAt: '2024-07-15' },
+  // Congo
+  { id: 'sup_acc3', supplierId: 'supp3', companyName: 'Congo Pharma SA', contactPerson: 'Antoine Moussa', email: 'moussa@congopharma.cg', phone: '+242 06 123 456', address: 'Avenue Marien Ngouabi', city: 'Brazzaville', country: 'Congo', specialty: 'Spécialités pharmaceutiques', status: 'active', avatar: 'https://images.unsplash.com/photo-1472099645785-5658abf4ff4e?w=150&h=150&fit=crop&crop=face', createdAt: '2024-01-10' },
+  { id: 'sup_acc3b', supplierId: 'supp3b', companyName: 'Brazza Med', contactPerson: 'Jean Massamba', email: 'contact@brazzamed.cg', phone: '+242 05 654 321', address: 'Centre-ville', city: 'Brazzaville', country: 'Congo', specialty: 'Médicaments essentiels', status: 'active', avatar: 'https://images.unsplash.com/photo-1507003211169-0a1dd7228f2d?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-24', createdAt: '2024-03-22' },
+  // Tchad
+  { id: 'sup_acc4', supplierId: 'supp4', companyName: 'Tchad Pharma SARL', contactPerson: 'Hassan Abakar', email: 'hassan@tchadpharma.td', phone: '+235 66 12 34 56', address: 'Avenue Charles de Gaulle', city: 'N\'Djamena', country: 'Tchad', specialty: 'API et principes actifs', status: 'active', avatar: 'https://images.unsplash.com/photo-1500648767791-00dcc994a43e?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-24', createdAt: '2024-03-22' },
+  { id: 'sup_acc4b', supplierId: 'supp4b', companyName: 'N\'Djamena Med', contactPerson: 'Ibrahim Hissein', email: 'contact@ndjamenamed.td', phone: '+235 99 87 65 43', address: 'Quartier Moursal', city: 'N\'Djamena', country: 'Tchad', specialty: 'Médicaments génériques', status: 'active', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face', lastLogin: '2025-02-23', createdAt: '2024-04-18' },
 ]
 
 // Comptes clients pour le portail
 const clientAccounts: ClientAccount[] = [
+  // Cameroun
   { id: 'clt_acc1', clientId: 'cl1', companyName: 'Pharmacie du Centre', type: 'pharmacy', contactPerson: 'Pharmacien Jean-Pierre Atangana', email: 'pharmacie.centre@email.cm', phone: '+237 677 456 789', address: 'Avenue de l\'Indépendance', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face', creditLimit: 5000000, currentBalance: 1250000, lastLogin: '2025-02-27', createdAt: '2024-01-15' },
   { id: 'clt_acc2', clientId: 'cl2', companyName: 'Clinique Bonne Espérance', type: 'clinic', contactPerson: 'Dr. Marie Fouda', email: 'clinique.esperance@email.cm', phone: '+237 677 678 901', address: 'Quartier Mvog-Mbi', city: 'Yaoundé', region: 'Centre', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face', creditLimit: 10000000, currentBalance: 3500000, lastLogin: '2025-02-26', createdAt: '2023-11-20' },
   { id: 'clt_acc3', clientId: 'cl3', companyName: 'Hôpital Central de Douala', type: 'hospital', contactPerson: 'Dr. Paul Mbarga', email: 'hopital.central@email.cm', phone: '+237 699 345 678', address: 'Route de Bonanjo', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face', creditLimit: 20000000, currentBalance: 8500000, lastLogin: '2025-02-25', createdAt: '2023-05-10' },
-  { id: 'clt_acc4', clientId: 'cl4', companyName: 'Pharmacie des Plateaux', type: 'pharmacy', contactPerson: 'Mme Rose Tchinda', email: 'pharmacie.plateaux@email.cm', phone: '+237 699 567 890', address: 'Quartier Administratif', city: 'Bafoussam', region: 'Ouest', country: 'Cameroun', category: 'B', status: 'active', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face', creditLimit: 3000000, currentBalance: 450000, createdAt: '2024-04-05' },
-  { id: 'clt_acc5', clientId: 'cl5', companyName: 'Cabinet Médical Dr. Nkodo', type: 'doctor', contactPerson: 'Dr. Emmanuel Nkodo', email: 'nkodo@email.cm', phone: '+237 699 123 456', address: 'Akwa', city: 'Douala', region: 'Littoral', country: 'Cameroun', category: 'B', status: 'active', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face', creditLimit: 1000000, currentBalance: 150000, lastLogin: '2025-02-27', createdAt: '2024-02-28' },
+  // Gabon
+  { id: 'clt_acc4', clientId: 'cl4', companyName: 'Pharmacie de Libreville', type: 'pharmacy', contactPerson: 'Pharmacien Pierre Mboumba', email: 'pharmacie.libreville@email.ga', phone: '+241 66 123 456', address: 'Boulevard de l\'Indépendance', city: 'Libreville', region: 'Estuaire', country: 'Gabon', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1580489944761-15a19d654956?w=150&h=150&fit=crop&crop=face', creditLimit: 8000000, currentBalance: 2500000, lastLogin: '2025-02-27', createdAt: '2024-02-15' },
+  { id: 'clt_acc5', clientId: 'cl5', companyName: 'Hôpital Owendo', type: 'hospital', contactPerson: 'Dr. Angèle Ondo', email: 'hopital.owendo@email.ga', phone: '+241 74 567 890', address: 'Route de l\'Aéroport', city: 'Owendo', region: 'Estuaire', country: 'Gabon', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face', creditLimit: 15000000, currentBalance: 5000000, lastLogin: '2025-02-26', createdAt: '2023-09-10' },
+  // Congo
+  { id: 'clt_acc6', clientId: 'cl6', companyName: 'Pharmacie de Brazzaville', type: 'pharmacy', contactPerson: 'Pharmacien Antoine Massamba', email: 'pharmacie.brazza@email.cg', phone: '+242 06 234 567', address: 'Avenue Marien Ngouabi', city: 'Brazzaville', region: 'Brazzaville', country: 'Congo', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1612349317150-e413f6a5b16d?w=150&h=150&fit=crop&crop=face', creditLimit: 6000000, currentBalance: 1800000, lastLogin: '2025-02-27', createdAt: '2024-03-20' },
+  { id: 'clt_acc7', clientId: 'cl7', companyName: 'Hôpital Central de Brazzaville', type: 'hospital', contactPerson: 'Dr. Jean Moussa', email: 'hopital.central@email.cg', phone: '+242 05 678 901', address: 'Centre-ville', city: 'Brazzaville', region: 'Brazzaville', country: 'Congo', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1560250097-0b93528c311a?w=150&h=150&fit=crop&crop=face', creditLimit: 12000000, currentBalance: 4000000, lastLogin: '2025-02-25', createdAt: '2023-07-15' },
+  // Tchad
+  { id: 'clt_acc8', clientId: 'cl8', companyName: 'Pharmacie de N\'Djamena', type: 'pharmacy', contactPerson: 'Pharmacien Ibrahim Hissein', email: 'pharmacie.ndjamena@email.td', phone: '+235 66 34 56 78', address: 'Avenue Charles de Gaulle', city: 'N\'Djamena', region: 'N\'Djamena', country: 'Tchad', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1573496359142-b8d87734a5a2?w=150&h=150&fit=crop&crop=face', creditLimit: 4000000, currentBalance: 950000, lastLogin: '2025-02-27', createdAt: '2024-04-10' },
+  { id: 'clt_acc9', clientId: 'cl9', companyName: 'Hôpital Central de N\'Djamena', type: 'hospital', contactPerson: 'Dr. Hassan Abakar', email: 'hopital.ndjamena@email.td', phone: '+235 99 87 65 43', address: 'Quartier Moursal', city: 'N\'Djamena', region: 'N\'Djamena', country: 'Tchad', category: 'A', status: 'active', avatar: 'https://images.unsplash.com/photo-1559839734-2b71ea197ec2?w=150&h=150&fit=crop&crop=face', creditLimit: 10000000, currentBalance: 3200000, lastLogin: '2025-02-26', createdAt: '2023-10-05' },
 ]
 
 // Commandes fournisseurs
