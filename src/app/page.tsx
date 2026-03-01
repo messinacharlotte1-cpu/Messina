@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play
