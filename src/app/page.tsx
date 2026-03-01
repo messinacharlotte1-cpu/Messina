@@ -1361,7 +1361,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
               <Label className="text-sm font-medium mb-2 block">Type de portail</Label>
               <div className="grid grid-cols-3 gap-2">
                 {[
-                  { id: 'interne', label: 'Interne', icon: Building2, color: 'from-blue-500 to-indigo-500' },
+                  { id: 'interne', label: 'Prodipharm', icon: Building2, color: 'from-blue-500 to-indigo-500' },
                   { id: 'fournisseur', label: 'Fournisseur', icon: Truck, color: 'from-emerald-500 to-teal-500' },
                   { id: 'client', label: 'Client', icon: ShoppingCart, color: 'from-purple-500 to-pink-500' },
                 ].map((portal) => (
