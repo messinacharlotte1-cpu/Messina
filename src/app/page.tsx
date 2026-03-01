@@ -11586,8 +11586,15 @@ function EmployeePortalModule({ user, globalLeaves, onAddLeave }: {
   globalLeaves: Leave[]
   onAddLeave: (leave: Leave) => void
 }) {
-  const [activeTab, setActiveTab] = useState<'payslips' | 'contract' | 'hr-info' | 'documents' | 'department' | 'rotation'>('payslips')
+  const [activeTab, setActiveTab] = useState<'payslips' | 'contract' | 'hr-info' | 'documents' | 'department' | 'rotation' | 'hcp-contacts'>('payslips')
   const [showLeaveRequestModal, setShowLeaveRequestModal] = useState(false)
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [importSource, setImportSource] = useState<'csv' | 'excel' | 'vcard' | 'manual' | null>(null)
+  const [importedContacts, setImportedContacts] = useState<Partial<HCP>[]>([])
+  const [myHCPContacts, setMyHCPContacts] = useState<HCP[]>([])
+  const [manualContactForm, setManualContactForm] = useState({
+    name: '', speciality: '', region: '', phone: '', email: '', category: 'B' as 'A' | 'B' | 'C'
+  })
   const employee = initialEmployees.find(e => e.email === user.email) || initialEmployees[0]
   const employeePayslips = initialPayslips.filter(p => p.employeeId === employee.id)
   const employeeLeaves = globalLeaves.filter(l => l.employeeId === employee.id)
@@ -11595,6 +11602,22 @@ function EmployeePortalModule({ user, globalLeaves, onAddLeave }: {
   const employeeDisciplinary = initialDisciplinary.filter(d => d.employeeId === employee.id)
   const employeeDept = departments.find(d => d.name === employee.department)
   const { toast } = useToast()
+
+  // Charger les contacts HCP depuis localStorage
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem(`hcp_contacts_${user.id}`)
+      if (stored) {
+        setMyHCPContacts(JSON.parse(stored))
+      }
+    } catch {}
+  }, [user.id])
+
+  // Sauvegarder les contacts HCP dans localStorage
+  const saveHCPContacts = (contacts: HCP[]) => {
+    setMyHCPContacts(contacts)
+    localStorage.setItem(`hcp_contacts_${user.id}`, JSON.stringify(contacts))
+  }
 
   // Calculer les jours entre deux dates
   const calculateDays = (start: string, end: string) => {
@@ -11684,9 +11707,229 @@ function EmployeePortalModule({ user, globalLeaves, onAddLeave }: {
     { id: 'contract' as const, label: 'Mon contrat', icon: FileText, color: 'from-blue-500 to-indigo-600' },
     { id: 'hr-info' as const, label: 'RH & Discipline', icon: Users, color: 'from-purple-500 to-pink-600' },
     { id: 'documents' as const, label: 'Mon dossier', icon: FileText, color: 'from-orange-500 to-amber-600' },
+    { id: 'hcp-contacts' as const, label: 'Mes contacts HCP', icon: User, color: 'from-green-500 to-emerald-600' },
     { id: 'department' as const, label: 'Mon département', icon: Building2, color: 'from-cyan-500 to-blue-600' },
     { id: 'rotation' as const, label: 'Rotation personnel', icon: RefreshCw, color: 'from-rose-500 to-red-600' },
   ]
+
+  // ========== Fonctions d'import HCP ==========
+  
+  // Parser CSV
+  const parseCSV = (text: string): Partial<HCP>[] => {
+    const lines = text.split('\n').filter(line => line.trim())
+    if (lines.length < 2) return []
+    
+    const headers = lines[0].split(',').map(h => h.trim().toLowerCase())
+    const contacts: Partial<HCP>[] = []
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(',').map(v => v.trim())
+      const contact: Partial<HCP> = {}
+      
+      headers.forEach((header, index) => {
+        const value = values[index] || ''
+        if (header.includes('nom') || header.includes('name')) contact.name = value
+        if (header.includes('specialite') || header.includes('speciality') || header.includes('spécialité')) contact.speciality = value
+        if (header.includes('region') || header.includes('région') || header.includes('ville')) contact.region = value
+        if (header.includes('tel') || header.includes('phone') || header.includes('téléphone')) contact.phone = value
+        if (header.includes('email') || header.includes('mail')) contact.email = value
+        if (header.includes('categorie') || header.includes('category') || header.includes('catégorie')) {
+          const cat = value.toUpperCase()
+          if (cat === 'A' || cat === 'B' || cat === 'C') contact.category = cat as 'A' | 'B' | 'C'
+        }
+      })
+      
+      if (contact.name) {
+        contacts.push({
+          ...contact,
+          id: `hcp_import_${Date.now()}_${i}`,
+          visits: 0,
+          lastVisit: '-',
+          status: 'active',
+          category: contact.category || 'B',
+          assignedDM: user.name
+        })
+      }
+    }
+    
+    return contacts
+  }
+
+  // Parser vCard
+  const parseVCard = (text: string): Partial<HCP>[] => {
+    const contacts: Partial<HCP>[] = []
+    const vcards = text.split('BEGIN:VCARD').filter(v => v.trim())
+    
+    vcards.forEach((vcard, index) => {
+      const contact: Partial<HCP> = {}
+      
+      // Extraire le nom complet
+      const fnMatch = vcard.match(/FN:(.+)/i)
+      if (fnMatch) contact.name = fnMatch[1].trim()
+      
+      // Extraire les emails
+      const emailMatch = vcard.match(/EMAIL[^:]*:(.+)/i)
+      if (emailMatch) contact.email = emailMatch[1].trim()
+      
+      // Extraire les téléphones
+      const telMatch = vcard.match(/TEL[^:]*:(.+)/i)
+      if (telMatch) contact.phone = telMatch[1].trim()
+      
+      // Extraire l'organisation/spécialité
+      const orgMatch = vcard.match(/ORG:(.+)/i)
+      if (orgMatch) contact.speciality = orgMatch[1].trim()
+      
+      // Extraire l'adresse/région
+      const adrMatch = vcard.match(/ADR[^:]*:(.+)/i)
+      if (adrMatch) {
+        const adrParts = adrMatch[1].split(';')
+        contact.region = adrParts[adrParts.length - 1].trim() || adrParts[2]?.trim() || ''
+      }
+      
+      if (contact.name) {
+        contacts.push({
+          ...contact,
+          id: `hcp_vcard_${Date.now()}_${index}`,
+          visits: 0,
+          lastVisit: '-',
+          status: 'active',
+          category: 'B',
+          assignedDM: user.name
+        })
+      }
+    })
+    
+    return contacts
+  }
+
+  // Parser Excel (format texte simplifié)
+  const parseExcelText = (text: string): Partial<HCP>[] => {
+    const lines = text.split('\n').filter(line => line.trim())
+    if (lines.length < 2) return []
+    
+    // Détecter le séparateur (tabulation ou point-virgule)
+    const firstLine = lines[0]
+    const separator = firstLine.includes('\t') ? '\t' : firstLine.includes(';') ? ';' : ','
+    
+    const headers = firstLine.split(separator).map(h => h.trim().toLowerCase())
+    const contacts: Partial<HCP>[] = []
+    
+    for (let i = 1; i < lines.length; i++) {
+      const values = lines[i].split(separator).map(v => v.trim())
+      const contact: Partial<HCP> = {}
+      
+      headers.forEach((header, index) => {
+        const value = values[index] || ''
+        if (header.includes('nom') || header.includes('name')) contact.name = value
+        if (header.includes('specialite') || header.includes('speciality') || header.includes('spécialité')) contact.speciality = value
+        if (header.includes('region') || header.includes('région') || header.includes('ville')) contact.region = value
+        if (header.includes('tel') || header.includes('phone') || header.includes('téléphone')) contact.phone = value
+        if (header.includes('email') || header.includes('mail')) contact.email = value
+        if (header.includes('categorie') || header.includes('category') || header.includes('catégorie')) {
+          const cat = value.toUpperCase()
+          if (cat === 'A' || cat === 'B' || cat === 'C') contact.category = cat as 'A' | 'B' | 'C'
+        }
+      })
+      
+      if (contact.name) {
+        contacts.push({
+          ...contact,
+          id: `hcp_excel_${Date.now()}_${i}`,
+          visits: 0,
+          lastVisit: '-',
+          status: 'active',
+          category: contact.category || 'B',
+          assignedDM: user.name
+        })
+      }
+    }
+    
+    return contacts
+  }
+
+  // Gestion de l'upload de fichier
+  const handleFileUpload = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const text = event.target?.result as string
+      let contacts: Partial<HCP>[] = []
+      
+      if (importSource === 'csv') {
+        contacts = parseCSV(text)
+      } else if (importSource === 'vcard') {
+        contacts = parseVCard(text)
+      } else if (importSource === 'excel') {
+        contacts = parseExcelText(text)
+      }
+      
+      setImportedContacts(contacts)
+      toast({ 
+        title: 'Fichier importé', 
+        description: `${contacts.length} contacts détectés. Vérifiez et validez l'import.` 
+      })
+    }
+    
+    reader.readAsText(file)
+  }
+
+  // Valider et importer les contacts
+  const confirmImport = () => {
+    const validContacts = importedContacts.filter(c => c.name && c.name.trim()) as HCP[]
+    
+    if (validContacts.length === 0) {
+      toast({ title: 'Erreur', description: 'Aucun contact valide à importer', variant: 'destructive' })
+      return
+    }
+    
+    const newContacts = [...myHCPContacts, ...validContacts]
+    saveHCPContacts(newContacts)
+    setImportedContacts([])
+    setShowImportModal(false)
+    setImportSource(null)
+    
+    toast({ 
+      title: 'Import réussi', 
+      description: `${validContacts.length} contacts HCP ont été ajoutés à votre liste` 
+    })
+  }
+
+  // Ajouter un contact manuel
+  const handleAddManualContact = () => {
+    if (!manualContactForm.name.trim()) {
+      toast({ title: 'Erreur', description: 'Le nom est obligatoire', variant: 'destructive' })
+      return
+    }
+    
+    const newContact: HCP = {
+      id: `hcp_manual_${Date.now()}`,
+      name: manualContactForm.name,
+      speciality: manualContactForm.speciality || 'Non spécifiée',
+      region: manualContactForm.region || user.region || 'Non spécifiée',
+      phone: manualContactForm.phone || '-',
+      email: manualContactForm.email || '-',
+      visits: 0,
+      lastVisit: '-',
+      status: 'active',
+      category: manualContactForm.category,
+      assignedDM: user.name
+    }
+    
+    const newContacts = [...myHCPContacts, newContact]
+    saveHCPContacts(newContacts)
+    setManualContactForm({ name: '', speciality: '', region: '', phone: '', email: '', category: 'B' })
+    
+    toast({ title: 'Contact ajouté', description: `${newContact.name} a été ajouté à vos contacts` })
+  }
+
+  // Supprimer un contact
+  const handleDeleteContact = (id: string) => {
+    const newContacts = myHCPContacts.filter(c => c.id !== id)
+    saveHCPContacts(newContacts)
+    toast({ title: 'Contact supprimé', description: 'Le contact a été retiré de votre liste' })
+  }
 
   // Calculate tenure
   const hireDate = new Date(employee.hireDate)
@@ -12784,6 +13027,137 @@ function EmployeePortalModule({ user, globalLeaves, onAddLeave }: {
             </Card>
           </motion.div>
         )}
+
+        {/* ========== ONGLET MES CONTACTS HCP ========== */}
+        {activeTab === 'hcp-contacts' && (
+          <motion.div 
+            key="hcp-contacts" 
+            initial={{ opacity: 0, y: 20, scale: 0.98 }} 
+            animate={{ opacity: 1, y: 0, scale: 1 }} 
+            exit={{ opacity: 0, y: -20, scale: 0.98 }}
+            transition={{ duration: 0.3 }}
+            className="space-y-6"
+          >
+            {/* Header avec stats */}
+            <Card className="border-0 shadow-xl overflow-hidden">
+              <div className="bg-gradient-to-r from-green-600 to-emerald-600 p-6">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-4">
+                    <div className="p-3 bg-white/20 rounded-xl backdrop-blur-sm">
+                      <User className="h-8 w-8 text-white" />
+                    </div>
+                    <div>
+                      <CardTitle className="text-2xl text-white">Mes Contacts HCP</CardTitle>
+                      <p className="text-green-100 mt-1">{myHCPContacts.length} professionnel(s) de santé dans votre liste</p>
+                    </div>
+                  </div>
+                  <Button 
+                    onClick={() => setShowImportModal(true)}
+                    className="bg-white text-green-600 hover:bg-green-50"
+                  >
+                    <Upload className="h-4 w-4 mr-2" />
+                    Importer des contacts
+                  </Button>
+                </div>
+              </div>
+              <CardContent className="p-6">
+                {/* Stats */}
+                <div className="grid grid-cols-2 lg:grid-cols-4 gap-4 mb-6">
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border">
+                    <p className="text-sm text-slate-500">Total contacts</p>
+                    <p className="text-2xl font-bold text-slate-900 dark:text-white">{myHCPContacts.length}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border">
+                    <p className="text-sm text-slate-500">Catégorie A</p>
+                    <p className="text-2xl font-bold text-emerald-600">{myHCPContacts.filter(c => c.category === 'A').length}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border">
+                    <p className="text-sm text-slate-500">Catégorie B</p>
+                    <p className="text-2xl font-bold text-blue-600">{myHCPContacts.filter(c => c.category === 'B').length}</p>
+                  </div>
+                  <div className="bg-slate-50 dark:bg-slate-800/50 rounded-xl p-4 border">
+                    <p className="text-sm text-slate-500">Catégorie C</p>
+                    <p className="text-2xl font-bold text-amber-600">{myHCPContacts.filter(c => c.category === 'C').length}</p>
+                  </div>
+                </div>
+
+                {/* Liste des contacts */}
+                {myHCPContacts.length === 0 ? (
+                  <div className="text-center py-12">
+                    <User className="h-16 w-16 text-slate-300 mx-auto mb-4" />
+                    <h3 className="text-lg font-semibold text-slate-600 mb-2">Aucun contact HCP</h3>
+                    <p className="text-slate-500 mb-4">Importez vos contacts depuis différentes sources pour commencer</p>
+                    <Button onClick={() => setShowImportModal(true)}>
+                      <Upload className="h-4 w-4 mr-2" />
+                      Importer des contacts
+                    </Button>
+                  </div>
+                ) : (
+                  <div className="overflow-x-auto rounded-xl border">
+                    <table className="w-full">
+                      <thead className="bg-slate-50 dark:bg-slate-800">
+                        <tr>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300">Nom</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300">Spécialité</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300 hidden md:table-cell">Région</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300 hidden lg:table-cell">Téléphone</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300 hidden lg:table-cell">Email</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300">Cat.</th>
+                          <th className="text-left p-3 font-semibold text-slate-600 dark:text-slate-300">Actions</th>
+                        </tr>
+                      </thead>
+                      <tbody className="divide-y divide-slate-200 dark:divide-slate-700">
+                        {myHCPContacts.map((contact, i) => (
+                          <motion.tr 
+                            key={contact.id}
+                            initial={{ opacity: 0 }}
+                            animate={{ opacity: 1 }}
+                            transition={{ delay: i * 0.03 }}
+                            className="hover:bg-slate-50 dark:hover:bg-slate-800/50"
+                          >
+                            <td className="p-3">
+                              <div className="flex items-center gap-2">
+                                <Avatar className="h-8 w-8">
+                                  <AvatarFallback className="bg-gradient-to-br from-green-500 to-emerald-600 text-white text-xs">
+                                    {contact.name.split(' ').map(n => n[0]).join('').substring(0, 2)}
+                                  </AvatarFallback>
+                                </Avatar>
+                                <span className="font-medium">{contact.name}</span>
+                              </div>
+                            </td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300">{contact.speciality}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden md:table-cell">{contact.region}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{contact.phone}</td>
+                            <td className="p-3 text-slate-600 dark:text-slate-300 hidden lg:table-cell">{contact.email}</td>
+                            <td className="p-3">
+                              <Badge className={`${
+                                contact.category === 'A' ? 'bg-emerald-100 text-emerald-700' :
+                                contact.category === 'B' ? 'bg-blue-100 text-blue-700' :
+                                'bg-amber-100 text-amber-700'
+                              }`}>
+                                {contact.category}
+                              </Badge>
+                            </td>
+                            <td className="p-3">
+                              <Button 
+                                variant="ghost" 
+                                size="sm" 
+                                onClick={() => handleDeleteContact(contact.id)}
+                                className="text-red-500 hover:text-red-700 hover:bg-red-50"
+                              >
+                                <Trash2 className="h-4 w-4" />
+                              </Button>
+                            </td>
+                          </motion.tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                )}
+              </CardContent>
+            </Card>
+          </motion.div>
+        )}
       </AnimatePresence>
 
       {/* Modal demande de congé */}
@@ -12809,6 +13183,236 @@ function EmployeePortalModule({ user, globalLeaves, onAddLeave }: {
                 onSubmit={handleSubmitLeaveRequest}
                 onCancel={() => setShowLeaveRequestModal(false)}
               />
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal import contacts HCP */}
+      <AnimatePresence>
+        {showImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+            onClick={() => {
+              setShowImportModal(false)
+              setImportSource(null)
+              setImportedContacts([])
+            }}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-xl w-full max-w-2xl shadow-2xl max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6">
+                <div className="flex items-center justify-between mb-6">
+                  <h2 className="text-xl font-bold">Importer des contacts HCP</h2>
+                  <Button variant="ghost" size="sm" onClick={() => {
+                    setShowImportModal(false)
+                    setImportSource(null)
+                    setImportedContacts([])
+                  }}>
+                    <X className="h-4 w-4" />
+                  </Button>
+                </div>
+
+                {/* Sélection de la source */}
+                {!importSource && (
+                  <div className="space-y-4">
+                    <p className="text-slate-600 dark:text-slate-400">Choisissez une source d'import :</p>
+                    <div className="grid grid-cols-2 gap-4">
+                      <button
+                        onClick={() => setImportSource('csv')}
+                        className="p-6 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-left"
+                      >
+                        <FileText className="h-10 w-10 text-green-500 mb-3" />
+                        <h3 className="font-semibold mb-1">Fichier CSV</h3>
+                        <p className="text-sm text-slate-500">Format CSV avec colonnes: nom, spécialité, région, téléphone, email, catégorie</p>
+                      </button>
+                      <button
+                        onClick={() => setImportSource('excel')}
+                        className="p-6 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left"
+                      >
+                        <FileSpreadsheet className="h-10 w-10 text-blue-500 mb-3" />
+                        <h3 className="font-semibold mb-1">Fichier Excel</h3>
+                        <p className="text-sm text-slate-500">Format Excel (.xlsx) copié ou exporté en texte</p>
+                      </button>
+                      <button
+                        onClick={() => setImportSource('vcard')}
+                        className="p-6 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:border-purple-500 hover:bg-purple-50 dark:hover:bg-purple-900/20 transition-all text-left"
+                      >
+                        <User className="h-10 w-10 text-purple-500 mb-3" />
+                        <h3 className="font-semibold mb-1">Fichier vCard</h3>
+                        <p className="text-sm text-slate-500">Format vCard (.vcf) exporté depuis votre téléphone ou Outlook</p>
+                      </button>
+                      <button
+                        onClick={() => setImportSource('manual')}
+                        className="p-6 border-2 border-slate-200 dark:border-slate-700 rounded-xl hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left"
+                      >
+                        <Plus className="h-10 w-10 text-orange-500 mb-3" />
+                        <h3 className="font-semibold mb-1">Saisie manuelle</h3>
+                        <p className="text-sm text-slate-500">Ajouter un contact manuellement</p>
+                      </button>
+                    </div>
+                  </div>
+                )}
+
+                {/* Upload fichier */}
+                {(importSource === 'csv' || importSource === 'excel' || importSource === 'vcard') && importedContacts.length === 0 && (
+                  <div className="space-y-4">
+                    <Button variant="ghost" size="sm" onClick={() => setImportSource(null)}>
+                      <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Retour
+                    </Button>
+                    <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center">
+                      <Upload className="h-12 w-12 text-slate-400 mx-auto mb-4" />
+                      <p className="text-slate-600 dark:text-slate-400 mb-4">
+                        Glissez votre fichier ici ou cliquez pour sélectionner
+                      </p>
+                      <input
+                        type="file"
+                        accept={importSource === 'csv' ? '.csv' : importSource === 'vcard' ? '.vcf' : '.txt,.xlsx,.xls'}
+                        onChange={handleFileUpload}
+                        className="hidden"
+                        id="file-upload"
+                      />
+                      <Button asChild>
+                        <label htmlFor="file-upload" className="cursor-pointer">
+                          Sélectionner un fichier
+                        </label>
+                      </Button>
+                    </div>
+                    <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4 text-sm">
+                      <p className="font-semibold mb-2">Format attendu :</p>
+                      <code className="text-xs bg-slate-200 dark:bg-slate-700 p-2 rounded block">
+                        {importSource === 'csv' && 'nom,spécialité,région,téléphone,email,catégorie\nDr. Dupont,Cardiologie,Douala,+237699123456,dupont@email.com,A'}
+                        {importSource === 'excel' && 'nom | spécialité | région | téléphone | email | catégorie\nDr. Dupont | Cardiologie | Douala | +237699123456 | dupont@email.com | A'}
+                        {importSource === 'vcard' && 'BEGIN:VCARD\nFN:Dr. Dupont\nTEL:+237699123456\nEMAIL:dupont@email.com\nORG:Cardiologie\nEND:VCARD'}
+                      </code>
+                    </div>
+                  </div>
+                )}
+
+                {/* Prévisualisation des contacts importés */}
+                {importedContacts.length > 0 && (
+                  <div className="space-y-4">
+                    <div className="flex items-center justify-between">
+                      <h3 className="font-semibold">{importedContacts.length} contacts détectés</h3>
+                      <div className="flex gap-2">
+                        <Button variant="outline" onClick={() => setImportedContacts([])}>
+                          Annuler
+                        </Button>
+                        <Button onClick={confirmImport}>
+                          <Check className="h-4 w-4 mr-2" />
+                          Confirmer l'import
+                        </Button>
+                      </div>
+                    </div>
+                    <div className="max-h-60 overflow-y-auto border rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                          <tr>
+                            <th className="text-left p-2">Nom</th>
+                            <th className="text-left p-2">Spécialité</th>
+                            <th className="text-left p-2">Téléphone</th>
+                            <th className="text-left p-2">Cat.</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importedContacts.map((contact, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="p-2">{contact.name}</td>
+                              <td className="p-2">{contact.speciality || '-'}</td>
+                              <td className="p-2">{contact.phone || '-'}</td>
+                              <td className="p-2">{contact.category || 'B'}</td>
+                            </tr>
+                          ))}
+                        </tbody>
+                      </table>
+                    </div>
+                  </div>
+                )}
+
+                {/* Formulaire manuel */}
+                {importSource === 'manual' && (
+                  <div className="space-y-4">
+                    <Button variant="ghost" size="sm" onClick={() => setImportSource(null)}>
+                      <ArrowRight className="h-4 w-4 mr-2 rotate-180" /> Retour
+                    </Button>
+                    <div className="grid grid-cols-2 gap-4">
+                      <div className="col-span-2">
+                        <Label>Nom complet *</Label>
+                        <Input 
+                          value={manualContactForm.name}
+                          onChange={e => setManualContactForm({...manualContactForm, name: e.target.value})}
+                          placeholder="Dr. Jean Dupont"
+                        />
+                      </div>
+                      <div>
+                        <Label>Spécialité</Label>
+                        <Input 
+                          value={manualContactForm.speciality}
+                          onChange={e => setManualContactForm({...manualContactForm, speciality: e.target.value})}
+                          placeholder="Cardiologie"
+                        />
+                      </div>
+                      <div>
+                        <Label>Région</Label>
+                        <Input 
+                          value={manualContactForm.region}
+                          onChange={e => setManualContactForm({...manualContactForm, region: e.target.value})}
+                          placeholder="Douala"
+                        />
+                      </div>
+                      <div>
+                        <Label>Téléphone</Label>
+                        <Input 
+                          value={manualContactForm.phone}
+                          onChange={e => setManualContactForm({...manualContactForm, phone: e.target.value})}
+                          placeholder="+237 699 123 456"
+                        />
+                      </div>
+                      <div>
+                        <Label>Email</Label>
+                        <Input 
+                          type="email"
+                          value={manualContactForm.email}
+                          onChange={e => setManualContactForm({...manualContactForm, email: e.target.value})}
+                          placeholder="contact@email.com"
+                        />
+                      </div>
+                      <div>
+                        <Label>Catégorie</Label>
+                        <select 
+                          value={manualContactForm.category}
+                          onChange={e => setManualContactForm({...manualContactForm, category: e.target.value as 'A' | 'B' | 'C'})}
+                          className="w-full border rounded-lg px-3 py-2 bg-background"
+                        >
+                          <option value="A">A - Priorité haute</option>
+                          <option value="B">B - Priorité moyenne</option>
+                          <option value="C">C - Priorité basse</option>
+                        </select>
+                      </div>
+                    </div>
+                    <div className="flex justify-end gap-2 pt-4">
+                      <Button variant="outline" onClick={() => {
+                        setImportSource(null)
+                        setManualContactForm({ name: '', speciality: '', region: '', phone: '', email: '', category: 'B' })
+                      }}>
+                        Annuler
+                      </Button>
+                      <Button onClick={handleAddManualContact}>
+                        <Plus className="h-4 w-4 mr-2" />
+                        Ajouter le contact
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
             </motion.div>
           </motion.div>
         )}
