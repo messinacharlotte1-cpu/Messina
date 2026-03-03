@@ -14971,6 +14971,13 @@ export default function PharmaLinkApp() {
   const [showProfileModal, setShowProfileModal] = useState(false)
   const [isHydrated, setIsHydrated] = useState(false)
   const [globalLeaves, setGlobalLeaves] = useState<Leave[]>(initialLeaves)
+  
+  // Protection PIN pour "Mon espace"
+  const [showPinModal, setShowPinModal] = useState(false)
+  const [pendingModule, setPendingModule] = useState<Module | null>(null)
+  const [mySpaceUnlocked, setMySpaceUnlocked] = useState(false)
+  const [showSetupPinModal, setShowSetupPinModal] = useState(false)
+  const [pinError, setPinError] = useState('')
 
   // Ajouter une nouvelle demande de congé
   const handleAddLeave = (leave: Leave) => {
@@ -15006,10 +15013,63 @@ export default function PharmaLinkApp() {
   const logout = () => {
     localStorage.removeItem('pharmalink_user')
     setUser(null)
+    setMySpaceUnlocked(false) // Réinitialiser l'accès à "Mon espace"
   }
 
   const handleUpdateProfile = (updatedUser: UserType) => {
     setUser(updatedUser)
+  }
+
+  // Gestion du changement de module avec protection PIN
+  const handleModuleChange = (newModule: Module) => {
+    // Si l'utilisateur essaie d'accéder à "Mon espace"
+    if (newModule === 'my-space') {
+      // Vérifier si un PIN est déjà configuré
+      const savedPin = localStorage.getItem('pharmalink_pin')
+      if (!savedPin) {
+        // Pas de PIN, demander de créer un
+        setShowSetupPinModal(true)
+        return
+      }
+      
+      // Si l'espace n'est pas encore déverrouillé
+      if (!mySpaceUnlocked) {
+        setPendingModule(newModule)
+        setShowPinModal(true)
+        return
+      }
+    }
+    
+    setModule(newModule)
+  }
+
+  // Vérifier le PIN
+  const handleVerifyPin = (pin: string) => {
+    const savedPin = localStorage.getItem('pharmalink_pin')
+    if (pin === savedPin) {
+      setShowPinModal(false)
+      setMySpaceUnlocked(true)
+      setPendingModule(null)
+      setPinError('')
+      if (pendingModule) {
+        setModule(pendingModule)
+      }
+    } else {
+      setPinError('Code PIN incorrect')
+    }
+  }
+
+  // Configurer un nouveau PIN
+  const handleSetupPin = (pin: string) => {
+    if (pin.length >= 4) {
+      localStorage.setItem('pharmalink_pin', pin)
+      setShowSetupPinModal(false)
+      setMySpaceUnlocked(true)
+      setModule('my-space')
+      setPinError('')
+    } else {
+      setPinError('Le code PIN doit contenir au moins 4 chiffres')
+    }
   }
 
   // Afficher un loader pendant l'hydratation pour éviter le flash
@@ -15142,11 +15202,12 @@ export default function PharmaLinkApp() {
                 initial={{ opacity: 0, x: -20 }}
                 animate={{ opacity: 1, x: 0 }}
                 transition={{ delay: i * 0.05 }}
-                onClick={() => setModule(m.id)}
+                onClick={() => handleModuleChange(m.id)}
                 className={`w-full flex items-center gap-3 px-3 py-2.5 rounded-lg transition-all text-muted-foreground hover:text-foreground hover:bg-sidebar-accent ${module === m.id ? 'bg-primary text-primary-foreground' : ''}`}
               >
                 <m.icon className="h-5 w-5" />
                 {sidebarOpen && <span className="font-medium">{m.label}</span>}
+                {m.id === 'my-space' && sidebarOpen && <Lock className="h-3 w-3 ml-auto opacity-50" />}
               </motion.button>
             ))}
           </nav>
@@ -15223,6 +15284,162 @@ export default function PharmaLinkApp() {
         onClose={() => setShowProfileModal(false)} 
         onSave={handleUpdateProfile}
       />
+
+      {/* Modal de configuration du PIN */}
+      <AnimatePresence>
+        {showSetupPinModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-md shadow-2xl p-6"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Lock className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-xl font-bold">Protéger votre espace personnel</h2>
+                <p className="text-muted-foreground mt-2">
+                  Créez un code PIN à 4 chiffres pour protéger l'accès à vos données personnelles (bulletins de paie, congés, etc.)
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Label className="text-sm font-medium">Code PIN (4 chiffres minimum)</Label>
+                  <Input
+                    type="password"
+                    placeholder="••••"
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest h-14 mt-2"
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      e.target.value = value
+                    }}
+                    id="setup-pin-input"
+                  />
+                </div>
+
+                {pinError && (
+                  <p className="text-sm text-red-500 text-center">{pinError}</p>
+                )}
+
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      setShowSetupPinModal(false)
+                      setPinError('')
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      const input = document.getElementById('setup-pin-input') as HTMLInputElement
+                      handleSetupPin(input.value)
+                    }}
+                  >
+                    Confirmer
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal de saisie du PIN */}
+      <AnimatePresence>
+        {showPinModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-md shadow-2xl p-6"
+            >
+              <div className="text-center mb-6">
+                <div className="w-16 h-16 bg-gradient-to-br from-blue-500 to-indigo-600 rounded-2xl flex items-center justify-center mx-auto mb-4">
+                  <Lock className="h-8 w-8 text-white" />
+                </div>
+                <h2 className="text-xl font-bold">Accès protégé</h2>
+                <p className="text-muted-foreground mt-2">
+                  Entrez votre code PIN pour accéder à votre espace personnel
+                </p>
+              </div>
+
+              <div className="space-y-4">
+                <div>
+                  <Input
+                    type="password"
+                    placeholder="••••"
+                    maxLength={6}
+                    className="text-center text-2xl tracking-widest h-14"
+                    autoFocus
+                    onChange={(e) => {
+                      const value = e.target.value.replace(/\D/g, '')
+                      e.target.value = value
+                      setPinError('')
+                    }}
+                    onKeyDown={(e) => {
+                      if (e.key === 'Enter') {
+                        const input = e.target as HTMLInputElement
+                        handleVerifyPin(input.value)
+                      }
+                    }}
+                    id="verify-pin-input"
+                  />
+                </div>
+
+                {pinError && (
+                  <p className="text-sm text-red-500 text-center flex items-center justify-center gap-2">
+                    <AlertTriangle className="h-4 w-4" />
+                    {pinError}
+                  </p>
+                )}
+
+                <div className="flex gap-3">
+                  <Button 
+                    variant="outline" 
+                    className="flex-1"
+                    onClick={() => {
+                      setShowPinModal(false)
+                      setPendingModule(null)
+                      setPinError('')
+                    }}
+                  >
+                    Annuler
+                  </Button>
+                  <Button 
+                    className="flex-1"
+                    onClick={() => {
+                      const input = document.getElementById('verify-pin-input') as HTMLInputElement
+                      handleVerifyPin(input.value)
+                    }}
+                  >
+                    <Lock className="h-4 w-4 mr-2" />
+                    Déverrouiller
+                  </Button>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
     </div>
   )
 }
