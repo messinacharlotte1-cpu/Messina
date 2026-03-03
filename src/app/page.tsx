@@ -1605,7 +1605,7 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
             transition={{ type: "spring", stiffness: 200, damping: 15, delay: 0.2 }}
             className="flex items-center gap-4 mb-8"
           >
-            <div className="w-16 h-16 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden p-1">
+            <div className="w-24 h-24 rounded-2xl bg-white/20 backdrop-blur-sm flex items-center justify-center overflow-hidden p-2">
               <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain rounded-xl" />
             </div>
             <div>
@@ -1668,8 +1668,8 @@ function LoginScreen({ onLogin }: { onLogin: (user: UserType) => void }) {
             transition={{ type: "spring", stiffness: 200, damping: 15 }}
             className="lg:hidden text-center mb-8"
           >
-            <div className="inline-flex items-center justify-center w-16 h-16 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 mb-4 overflow-hidden p-2">
-              <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain" />
+            <div className="inline-flex items-center justify-center w-20 h-20 rounded-2xl bg-gradient-to-br from-blue-600 to-indigo-600 mb-4 overflow-hidden p-2">
+              <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain rounded-xl" />
             </div>
             <h1 className="text-2xl font-bold">PharmaLink</h1>
             <p className="text-muted-foreground text-sm">by Prodipharm</p>
@@ -14267,7 +14267,7 @@ function SupplierPortal({ account, onLogout, onUpdateAvatar }: { account: Suppli
       >
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 overflow-hidden p-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-emerald-500 to-teal-600 flex items-center justify-center shadow-lg shadow-emerald-500/30 overflow-hidden p-1">
               <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             {!sidebarCollapsed && (
@@ -14664,7 +14664,7 @@ function ClientPortal({ account, onLogout, onUpdateAvatar }: { account: ClientAc
         className="bg-white dark:bg-slate-800 border-r border-slate-200 dark:border-slate-700 flex flex-col fixed h-full z-40 shadow-lg">
         <div className="h-16 flex items-center justify-between px-4 border-b border-slate-200 dark:border-slate-700">
           <div className="flex items-center gap-3">
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 overflow-hidden p-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-blue-500 to-indigo-600 flex items-center justify-center shadow-lg shadow-blue-500/30 overflow-hidden p-1">
               <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             {!sidebarCollapsed && <div><h1 className="font-bold text-slate-900 dark:text-white">Client</h1><p className="text-xs text-slate-500">Portal Pro</p></div>}
@@ -15122,7 +15122,7 @@ export default function PharmaLinkApp() {
             animate={{ opacity: 1, x: 0 }}
             className="flex items-center gap-3"
           >
-            <div className="w-10 h-10 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center overflow-hidden p-1">
+            <div className="w-12 h-12 rounded-xl bg-gradient-to-br from-primary to-primary/80 flex items-center justify-center overflow-hidden p-1">
               <img src="/logo.png" alt="Prodipharm Logo" className="w-full h-full object-contain rounded-lg" />
             </div>
             {sidebarOpen && (
