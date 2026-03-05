@@ -1996,6 +1996,385 @@ function MovementForm({ products, onSave, onCancel, preselectedProduct }: {
 }
 
 // ============================================
+// SAGE SAARI INTEGRATION - EXPORT/IMPORT CSV
+// ============================================
+
+// Types pour l'intégration Sage
+interface SageExportConfig {
+  delimiter: ';' | ',' | '\t'
+  encoding: 'utf-8' | 'iso-8859-1'
+  includeHeaders: boolean
+  dateFormat: 'DD/MM/YYYY' | 'YYYY-MM-DD'
+}
+
+const defaultSageConfig: SageExportConfig = {
+  delimiter: ';',
+  encoding: 'utf-8',
+  includeHeaders: true,
+  dateFormat: 'DD/MM/YYYY'
+}
+
+// Formater une date pour Sage
+const formatDateForSage = (date: string, format: 'DD/MM/YYYY' | 'YYYY-MM-DD' = 'DD/MM/YYYY'): string => {
+  if (!date || date === '-') return ''
+  try {
+    const d = new Date(date)
+    if (isNaN(d.getTime())) return ''
+    if (format === 'YYYY-MM-DD') {
+      return d.toISOString().split('T')[0]
+    }
+    return d.toLocaleDateString('fr-FR')
+  } catch {
+    return ''
+  }
+}
+
+// Formater un nombre pour Sage (format français)
+const formatNumberForSage = (num: number, decimals: number = 2): string => {
+  return num.toFixed(decimals).replace('.', ',')
+}
+
+// Export des Articles/Produits pour Sage Saari
+const exportProductsToSage = (products: PharmaProduct[], config: SageExportConfig = defaultSageConfig): string => {
+  const headers = [
+    'CodeArticle',
+    'Designation',
+    'Famille',
+    'Description',
+    'PrixVenteHT',
+    'PrixRevient',
+    'StockActuel',
+    'StockMin',
+    'StockMax',
+    'Unite',
+    'CodeTVA',
+    'Lot',
+    'DatePeremption',
+    'Fournisseur',
+    'Emplacement',
+    'Statut'
+  ]
+
+  const rows = products.map(p => [
+    p.code,
+    p.name,
+    p.category,
+    p.description.replace(/;/g, ',').replace(/\n/g, ' '),
+    formatNumberForSage(p.unitPrice),
+    formatNumberForSage(p.unitPrice * 0.7), // Prix de revient estimé
+    p.stockQuantity.toString(),
+    p.minStock.toString(),
+    p.maxStock.toString(),
+    'UNITE',
+    'TVA_18',
+    p.lotNumber,
+    formatDateForSage(p.expirationDate),
+    p.supplier,
+    p.location,
+    p.status === 'available' ? 'DISPONIBLE' : p.status === 'low_stock' ? 'STOCK_BAS' : p.status === 'out_of_stock' ? 'RUPTURE' : 'EXPIRE'
+  ])
+
+  const csvContent = config.includeHeaders 
+    ? [headers.join(config.delimiter), ...rows.map(r => r.join(config.delimiter))].join('\n')
+    : rows.map(r => r.join(config.delimiter)).join('\n')
+
+  return csvContent
+}
+
+// Export des Clients pour Sage Saari
+const exportClientsToSage = (clients: CommercialClient[], config: SageExportConfig = defaultSageConfig): string => {
+  const headers = [
+    'CodeTiers',
+    'RaisonSociale',
+    'TypeClient',
+    'Region',
+    'Ville',
+    'Adresse',
+    'Telephone',
+    'Email',
+    'ContactPrincipal',
+    'LimiteCredit',
+    'SoldeActuel',
+    'Statut',
+    'DerniereCommande',
+    'NombreCommandes'
+  ]
+
+  const typeLabels: Record<string, string> = {
+    pharmacy: 'Pharmacie',
+    hospital: 'Hopital',
+    clinic: 'Clinique',
+    health_center: 'Centre de sante',
+    other: 'Autre'
+  }
+
+  const rows = clients.map(c => [
+    c.code,
+    c.name,
+    typeLabels[c.type] || c.type,
+    c.region,
+    c.city,
+    c.address.replace(/;/g, ','),
+    c.phone,
+    c.email,
+    c.contactPerson,
+    formatNumberForSage(c.creditLimit, 0),
+    formatNumberForSage(c.currentBalance, 0),
+    c.status === 'active' ? 'ACTIF' : 'INACTIF',
+    formatDateForSage(c.lastOrderDate || ''),
+    c.totalOrders.toString()
+  ])
+
+  const csvContent = config.includeHeaders 
+    ? [headers.join(config.delimiter), ...rows.map(r => r.join(config.delimiter))].join('\n')
+    : rows.map(r => r.join(config.delimiter)).join('\n')
+
+  return csvContent
+}
+
+// Export des Ventes/Factures pour Sage Saari
+const exportInvoicesToSage = (invoices: Invoice[], config: SageExportConfig = defaultSageConfig): string => {
+  const headers = [
+    'NumPiece',
+    'TypePiece',
+    'DatePiece',
+    'CodeClient',
+    'NomClient',
+    'RefCommande',
+    'MontantHT',
+    'MontantTVA',
+    'MontantTTC',
+    'MontantPaye',
+    'ResteAPayer',
+    'Statut',
+    'DateEcheance',
+    'DateCreation'
+  ]
+
+  const statusLabels: Record<string, string> = {
+    draft: 'Brouillon',
+    sent: 'Envoyee',
+    paid: 'Payee',
+    partial: 'Partielle',
+    overdue: 'En retard',
+    cancelled: 'Annulee'
+  }
+
+  const rows = invoices.map(inv => [
+    inv.invoiceNumber,
+    'FACTURE',
+    formatDateForSage(inv.createdAt),
+    inv.clientId,
+    inv.name,
+    inv.orderNumber,
+    formatNumberForSage(inv.subtotal - inv.discount),
+    formatNumberForSage(inv.tax),
+    formatNumberForSage(inv.total),
+    formatNumberForSage(inv.amountPaid),
+    formatNumberForSage(inv.amountDue),
+    statusLabels[inv.status] || inv.status,
+    formatDateForSage(inv.dueDate),
+    formatDateForSage(inv.createdAt)
+  ])
+
+  const csvContent = config.includeHeaders 
+    ? [headers.join(config.delimiter), ...rows.map(r => r.join(config.delimiter))].join('\n')
+    : rows.map(r => r.join(config.delimiter)).join('\n')
+
+  return csvContent
+}
+
+// Export des Commandes pour Sage Saari
+const exportOrdersToSage = (orders: Order[], config: SageExportConfig = defaultSageConfig): string => {
+  const headers = [
+    'NumCommande',
+    'DateCommande',
+    'CodeClient',
+    'NomClient',
+    'TypeClient',
+    'MontantHT',
+    'MontantRemise',
+    'MontantTVA',
+    'MontantTTC',
+    'Statut',
+    'StatutPaiement',
+    'DateConfirmation',
+    'DateExpedition',
+    'DateLivraison'
+  ]
+
+  const statusLabels: Record<string, string> = {
+    draft: 'Brouillon',
+    pending: 'En attente',
+    confirmed: 'Confirmee',
+    shipped: 'Expediee',
+    delivered: 'Livree',
+    cancelled: 'Annulee'
+  }
+
+  const paymentLabels: Record<string, string> = {
+    unpaid: 'Non paye',
+    partial: 'Partiel',
+    paid: 'Paye'
+  }
+
+  const rows = orders.map(o => [
+    o.orderNumber,
+    formatDateForSage(o.createdAt),
+    o.clientId,
+    o.clientName,
+    o.clientType,
+    formatNumberForSage(o.subtotal),
+    formatNumberForSage(o.discount),
+    formatNumberForSage(o.tax),
+    formatNumberForSage(o.total),
+    statusLabels[o.status] || o.status,
+    paymentLabels[o.paymentStatus] || o.paymentStatus,
+    formatDateForSage(o.confirmedAt || ''),
+    formatDateForSage(o.shippedAt || ''),
+    formatDateForSage(o.deliveredAt || '')
+  ])
+
+  const csvContent = config.includeHeaders 
+    ? [headers.join(config.delimiter), ...rows.map(r => r.join(config.delimiter))].join('\n')
+    : rows.map(r => r.join(config.delimiter)).join('\n')
+
+  return csvContent
+}
+
+// Export des Mouvements de Stock pour Sage Saari
+const exportStockMovementsToSage = (movements: StockMovement[], config: SageExportConfig = defaultSageConfig): string => {
+  const headers = [
+    'NumMouvement',
+    'DateMouvement',
+    'CodeArticle',
+    'NomArticle',
+    'TypeMouvement',
+    'Quantite',
+    'Motif',
+    'Reference',
+    'EmplacementOrigine',
+    'EmplacementDestination',
+    'Utilisateur'
+  ]
+
+  const typeLabels: Record<string, string> = {
+    entry: 'ENTREE',
+    exit: 'SORTIE',
+    transfer: 'TRANSFERT',
+    adjustment: 'AJUSTEMENT'
+  }
+
+  const rows = movements.map(m => [
+    m.reference,
+    formatDateForSage(m.date),
+    m.productId,
+    m.productName.replace(/;/g, ','),
+    typeLabels[m.type] || m.type,
+    m.quantity.toString(),
+    m.reason.replace(/;/g, ','),
+    m.reference,
+    m.fromLocation || '',
+    m.toLocation || '',
+    m.userName
+  ])
+
+  const csvContent = config.includeHeaders 
+    ? [headers.join(config.delimiter), ...rows.map(r => r.join(config.delimiter))].join('\n')
+    : rows.map(r => r.join(config.delimiter)).join('\n')
+
+  return csvContent
+}
+
+// Télécharger un fichier CSV
+const downloadCSV = (content: string, filename: string) => {
+  // Ajouter BOM UTF-8 pour Excel
+  const bom = '\uFEFF'
+  const blob = new Blob([bom + content], { type: 'text/csv;charset=utf-8;' })
+  const url = URL.createObjectURL(blob)
+  const link = document.createElement('a')
+  link.href = url
+  link.download = filename
+  document.body.appendChild(link)
+  link.click()
+  document.body.removeChild(link)
+  URL.revokeObjectURL(url)
+}
+
+// Parser un fichier CSV importé
+const parseCSVImport = (content: string, delimiter: string = ';'): Record<string, string>[] => {
+  const lines = content.split('\n').filter(line => line.trim())
+  if (lines.length < 2) return []
+
+  const headers = lines[0].split(delimiter).map(h => h.trim().replace(/^"|"$/g, ''))
+  const rows: Record<string, string>[] = []
+
+  for (let i = 1; i < lines.length; i++) {
+    const values = lines[i].split(delimiter).map(v => v.trim().replace(/^"|"$/g, ''))
+    const row: Record<string, string> = {}
+    headers.forEach((header, index) => {
+      row[header] = values[index] || ''
+    })
+    rows.push(row)
+  }
+
+  return rows
+}
+
+// Import des Articles depuis Sage
+const importProductsFromSage = (rows: Record<string, string>[]): Partial<PharmaProduct>[] => {
+  return rows.map(row => ({
+    code: row['CodeArticle'] || row['Code'] || row['code_article'] || '',
+    name: row['Designation'] || row['Nom'] || row['designation'] || row['name'] || '',
+    category: row['Famille'] || row['Categorie'] || row['famille'] || 'Non classé',
+    description: row['Description'] || row['Libelle'] || row['description'] || '',
+    unitPrice: parseFloat((row['PrixVenteHT'] || row['Prix'] || '0').replace(',', '.')) || 0,
+    stockQuantity: parseInt(row['StockActuel'] || row['Stock'] || '0') || 0,
+    minStock: parseInt(row['StockMin'] || '0') || 100,
+    maxStock: parseInt(row['StockMax'] || '0') || 1000,
+    lotNumber: row['Lot'] || row['NumLot'] || '',
+    expirationDate: row['DatePeremption'] || row['DateExpiration'] || '',
+    supplier: row['Fournisseur'] || row['Fournisseur'] || '',
+    location: row['Emplacement'] || row['Localisation'] || '',
+    status: 'available' as const
+  })).filter(p => p.code && p.name)
+}
+
+// Import des Clients depuis Sage
+const importClientsFromSage = (rows: Record<string, string>[]): Partial<CommercialClient>[] => {
+  const typeMap: Record<string, 'pharmacy' | 'hospital' | 'clinic' | 'health_center' | 'other'> = {
+    'pharmacie': 'pharmacy',
+    'pharmacy': 'pharmacy',
+    'hopital': 'hospital',
+    'hospital': 'hospital',
+    'clinique': 'clinic',
+    'clinic': 'clinic',
+    'centre de sante': 'health_center',
+    'health_center': 'health_center',
+    'autre': 'other'
+  }
+
+  return rows.map(row => {
+    const typeStr = (row['TypeClient'] || row['Type'] || 'other').toLowerCase()
+    return {
+      code: row['CodeTiers'] || row['Code'] || row['code_client'] || '',
+      name: row['RaisonSociale'] || row['Nom'] || row['raison_sociale'] || '',
+      type: typeMap[typeStr] || 'other',
+      region: row['Region'] || row['region'] || '',
+      city: row['Ville'] || row['city'] || '',
+      address: row['Adresse'] || row['adresse'] || '',
+      phone: row['Telephone'] || row['Tel'] || row['telephone'] || '',
+      email: row['Email'] || row['email'] || '',
+      contactPerson: row['ContactPrincipal'] || row['Contact'] || '',
+      creditLimit: parseFloat((row['LimiteCredit'] || '0').replace(',', '.')) || 0,
+      currentBalance: parseFloat((row['SoldeActuel'] || row['Solde'] || '0').replace(',', '.')) || 0,
+      status: (row['Statut'] || 'ACTIF').toUpperCase() === 'ACTIF' ? 'active' as const : 'inactive' as const,
+      totalOrders: 0
+    }
+  }).filter(c => c.code && c.name)
+}
+
+// ============================================
 // STOCKS MODULE - GESTION DES STOCKS & PRODUITS
 // ============================================
 
@@ -2331,6 +2710,83 @@ function StocksModule({ user }: { user: UserType }) {
     setShowMovementModal(false)
   }
 
+  // États pour l'import/export Sage
+  const [showSageExportModal, setShowSageExportModal] = useState(false)
+  const [showSageImportModal, setShowSageImportModal] = useState(false)
+  const [importedProducts, setImportedProducts] = useState<Partial<PharmaProduct>[]>([])
+  const [importFile, setImportFile] = useState<File | null>(null)
+
+  // Export des produits vers Sage
+  const handleExportProductsToSage = () => {
+    const csvContent = exportProductsToSage(products)
+    const filename = `Sage_Articles_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ 
+      title: 'Export Sage réussi', 
+      description: `${products.length} articles exportés vers ${filename}` 
+    })
+  }
+
+  // Export des mouvements de stock vers Sage
+  const handleExportMovementsToSage = () => {
+    const csvContent = exportStockMovementsToSage(movements)
+    const filename = `Sage_Mouvements_Stock_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ 
+      title: 'Export Sage réussi', 
+      description: `${movements.length} mouvements exportés vers ${filename}` 
+    })
+  }
+
+  // Gestion de l'import de fichier
+  const handleImportFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    setImportFile(file)
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      const rows = parseCSVImport(content)
+      const imported = importProductsFromSage(rows)
+      setImportedProducts(imported)
+      toast({ 
+        title: 'Fichier analysé', 
+        description: `${imported.length} produits détectés dans le fichier` 
+      })
+    }
+    reader.readAsText(file)
+  }
+
+  // Valider l'import
+  const handleConfirmImport = () => {
+    const newProducts: PharmaProduct[] = importedProducts.map((p, i) => ({
+      id: `imported_${Date.now()}_${i}`,
+      code: p.code || `IMP-${i}`,
+      name: p.name || 'Sans nom',
+      category: p.category || 'Non classé',
+      description: p.description || '',
+      unitPrice: p.unitPrice || 0,
+      stockQuantity: p.stockQuantity || 0,
+      minStock: p.minStock || 100,
+      maxStock: p.maxStock || 1000,
+      lotNumber: p.lotNumber || '',
+      expirationDate: p.expirationDate || '',
+      supplier: p.supplier || '',
+      location: p.location || '',
+      status: 'available' as const
+    }))
+
+    setProducts([...products, ...newProducts])
+    setImportedProducts([])
+    setShowSageImportModal(false)
+    setImportFile(null)
+    toast({ 
+      title: 'Import réussi', 
+      description: `${newProducts.length} produits importés depuis Sage` 
+    })
+  }
+
   return (
     <motion.div
       initial="hidden"
@@ -2349,12 +2805,30 @@ function StocksModule({ user }: { user: UserType }) {
             <p className="text-muted-foreground">Gestion des stocks pharmaceutiques</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />Exporter
+        <div className="flex gap-2 flex-wrap">
+          {/* Bouton Export Sage */}
+          <div className="relative">
+            <Button 
+              variant="outline" 
+              className="gap-2 border-teal-500 text-teal-600 hover:bg-teal-50"
+              onClick={() => setShowSageExportModal(true)}
+            >
+              <Download className="h-4 w-4" />
+              <span className="hidden sm:inline">Export Sage</span>
+            </Button>
+          </div>
+          {/* Bouton Import Sage */}
+          <Button 
+            variant="outline" 
+            className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            onClick={() => setShowSageImportModal(true)}
+          >
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Import Sage</span>
           </Button>
           <Button className="gap-2" onClick={handleOpenNewProduct}>
-            <Plus className="h-4 w-4" />Nouveau produit
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nouveau produit</span>
           </Button>
         </div>
       </motion.div>
@@ -3769,6 +4243,207 @@ function StocksModule({ user }: { user: UserType }) {
         )}
       </AnimatePresence>
 
+      {/* Modal Export Sage */}
+      <AnimatePresence>
+        {showSageExportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 bg-gradient-to-r from-teal-600 to-cyan-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Download className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Export Sage Saari</h3>
+                      <p className="text-white/80 text-sm">Format CSV compatible Sage</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowSageExportModal(false)} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-muted-foreground">
+                  Sélectionnez les données à exporter vers Sage Saari :
+                </p>
+
+                <div className="space-y-3">
+                  {/* Export Articles */}
+                  <button
+                    onClick={handleExportProductsToSage}
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-teal-500 hover:bg-teal-50 dark:hover:bg-teal-900/20 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-teal-100 dark:bg-teal-900/30 flex items-center justify-center group-hover:bg-teal-200 dark:group-hover:bg-teal-900/50">
+                        <Package className="h-5 w-5 text-teal-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Articles / Produits</p>
+                        <p className="text-sm text-muted-foreground">{products.length} articles à exporter</p>
+                      </div>
+                      <Download className="h-5 w-5 text-muted-foreground group-hover:text-teal-600" />
+                    </div>
+                  </button>
+
+                  {/* Export Mouvements */}
+                  <button
+                    onClick={handleExportMovementsToSage}
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50">
+                        <RefreshCw className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Mouvements de Stock</p>
+                        <p className="text-sm text-muted-foreground">{movements.length} mouvements à exporter</p>
+                      </div>
+                      <Download className="h-5 w-5 text-muted-foreground group-hover:text-blue-600" />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>💡 Astuce :</strong> Les fichiers CSV sont formatés pour être directement importés dans Sage Saari. Le séparateur utilisé est le point-virgule (;).
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Import Sage */}
+      <AnimatePresence>
+        {showSageImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Upload className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Import Sage Saari</h3>
+                      <p className="text-white/80 text-sm">Importer des données depuis Sage</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => { setShowSageImportModal(false); setImportedProducts([]) }} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Zone d'upload */}
+                <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center">
+                  <Input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleImportFile}
+                    className="hidden"
+                    id="sage-import-file"
+                  />
+                  <label htmlFor="sage-import-file" className="cursor-pointer">
+                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="font-medium">Cliquez pour sélectionner un fichier CSV</p>
+                    <p className="text-sm text-muted-foreground mt-1">ou glissez-déposez votre fichier ici</p>
+                  </label>
+                </div>
+
+                {/* Format attendu */}
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <p className="font-medium mb-2">📋 Format attendu (colonnes Sage) :</p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">CodeArticle</code> - Code unique du produit</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">Designation</code> - Nom du produit</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">Famille</code> - Catégorie</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">PrixVenteHT</code> - Prix unitaire</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">StockActuel</code> - Quantité en stock</p>
+                  </div>
+                </div>
+
+                {/* Aperçu des données importées */}
+                {importedProducts.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">📦 Aperçu des données ({importedProducts.length} produits)</p>
+                      <Badge className="bg-green-100 text-green-700">{importedProducts.length} détectés</Badge>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                          <tr>
+                            <th className="p-2 text-left">Code</th>
+                            <th className="p-2 text-left">Désignation</th>
+                            <th className="p-2 text-left">Catégorie</th>
+                            <th className="p-2 text-right">Prix</th>
+                            <th className="p-2 text-right">Stock</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importedProducts.slice(0, 10).map((p, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="p-2 font-mono text-xs">{p.code}</td>
+                              <td className="p-2">{p.name}</td>
+                              <td className="p-2 text-muted-foreground">{p.category}</td>
+                              <td className="p-2 text-right">{p.unitPrice?.toLocaleString()}</td>
+                              <td className="p-2 text-right">{p.stockQuantity}</td>
+                            </tr>
+                          ))}
+                          {importedProducts.length > 10 && (
+                            <tr className="border-t bg-slate-50 dark:bg-slate-800">
+                              <td colSpan={5} className="p-2 text-center text-muted-foreground">
+                                ... et {importedProducts.length - 10} autres produits
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="flex-1" onClick={() => setImportedProducts([])}>
+                        Annuler
+                      </Button>
+                      <Button className="flex-1 gap-2" onClick={handleConfirmImport}>
+                        <Check className="h-4 w-4" />
+                        Importer {importedProducts.length} produits
+                      </Button>
+                    </div>
+                  </div>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
       <Toaster />
     </motion.div>
   )
@@ -3968,6 +4643,91 @@ function SalesModule({ user }: { user: UserType }) {
     toast({ title: 'Facture créée', description: `Facture ${newInvoice.invoiceNumber} créée` })
   }
 
+  // États pour l'import/export Sage
+  const [showSageExportModal, setShowSageExportModal] = useState(false)
+  const [showSageImportModal, setShowSageImportModal] = useState(false)
+  const [importedClients, setImportedClients] = useState<Partial<CommercialClient>[]>([])
+
+  // Export des clients vers Sage
+  const handleExportClientsToSage = () => {
+    const csvContent = exportClientsToSage(clients)
+    const filename = `Sage_Clients_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ 
+      title: 'Export Sage réussi', 
+      description: `${clients.length} clients exportés vers ${filename}` 
+    })
+  }
+
+  // Export des factures vers Sage
+  const handleExportInvoicesToSage = () => {
+    const csvContent = exportInvoicesToSage(invoiceList)
+    const filename = `Sage_Factures_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ 
+      title: 'Export Sage réussi', 
+      description: `${invoiceList.length} factures exportées vers ${filename}` 
+    })
+  }
+
+  // Export des commandes vers Sage
+  const handleExportOrdersToSage = () => {
+    const csvContent = exportOrdersToSage(orderList)
+    const filename = `Sage_Commandes_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ 
+      title: 'Export Sage réussi', 
+      description: `${orderList.length} commandes exportées vers ${filename}` 
+    })
+  }
+
+  // Gestion de l'import de fichier clients
+  const handleImportClientsFile = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      const content = event.target?.result as string
+      const rows = parseCSVImport(content)
+      const imported = importClientsFromSage(rows)
+      setImportedClients(imported)
+      toast({ 
+        title: 'Fichier analysé', 
+        description: `${imported.length} clients détectés dans le fichier` 
+      })
+    }
+    reader.readAsText(file)
+  }
+
+  // Valider l'import des clients
+  const handleConfirmImportClients = () => {
+    const newClients: CommercialClient[] = importedClients.map((c, i) => ({
+      id: `imported_${Date.now()}_${i}`,
+      code: c.code || `CLI-${i}`,
+      name: c.name || 'Sans nom',
+      type: c.type || 'other',
+      region: c.region || '',
+      city: c.city || '',
+      address: c.address || '',
+      phone: c.phone || '',
+      email: c.email || '',
+      contactPerson: c.contactPerson || '',
+      creditLimit: c.creditLimit || 0,
+      currentBalance: c.currentBalance || 0,
+      status: c.status || 'active' as const,
+      totalOrders: 0
+    }))
+
+    setClients([...clients, ...newClients])
+    setImportedClients([])
+    setShowSageImportModal(false)
+    toast({ 
+      title: 'Import réussi', 
+      description: `${newClients.length} clients importés depuis Sage` 
+    })
+  }
+
   return (
     <motion.div
       initial="hidden"
@@ -3986,12 +4746,28 @@ function SalesModule({ user }: { user: UserType }) {
             <p className="text-muted-foreground">Gestion commerciale et facturation</p>
           </div>
         </div>
-        <div className="flex gap-2">
-          <Button variant="outline" className="gap-2">
-            <Download className="h-4 w-4" />Exporter
+        <div className="flex gap-2 flex-wrap">
+          {/* Bouton Export Sage */}
+          <Button 
+            variant="outline" 
+            className="gap-2 border-orange-500 text-orange-600 hover:bg-orange-50"
+            onClick={() => setShowSageExportModal(true)}
+          >
+            <Download className="h-4 w-4" />
+            <span className="hidden sm:inline">Export Sage</span>
+          </Button>
+          {/* Bouton Import Sage */}
+          <Button 
+            variant="outline" 
+            className="gap-2 border-blue-500 text-blue-600 hover:bg-blue-50"
+            onClick={() => setShowSageImportModal(true)}
+          >
+            <Upload className="h-4 w-4" />
+            <span className="hidden sm:inline">Import Sage</span>
           </Button>
           <Button className="gap-2" onClick={() => { setShowOrderModal(true); setSelectedOrder(null) }}>
-            <Plus className="h-4 w-4" />Nouvelle commande
+            <Plus className="h-4 w-4" />
+            <span className="hidden sm:inline">Nouvelle commande</span>
           </Button>
         </div>
       </motion.div>
@@ -4980,6 +5756,224 @@ function SalesModule({ user }: { user: UserType }) {
                   )}
                   <Button variant="outline" onClick={() => { setShowOrderModal(false); setSelectedOrder(null) }} className="flex-1">Fermer</Button>
                 </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Export Sage */}
+      <AnimatePresence>
+        {showSageExportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-lg shadow-2xl overflow-hidden"
+            >
+              <div className="p-6 bg-gradient-to-r from-orange-600 to-rose-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Download className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Export Sage Saari</h3>
+                      <p className="text-white/80 text-sm">Format CSV compatible Sage</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowSageExportModal(false)} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                <p className="text-muted-foreground">
+                  Sélectionnez les données à exporter vers Sage Saari :
+                </p>
+
+                <div className="space-y-3">
+                  {/* Export Clients */}
+                  <button
+                    onClick={handleExportClientsToSage}
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-orange-500 hover:bg-orange-50 dark:hover:bg-orange-900/20 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-orange-100 dark:bg-orange-900/30 flex items-center justify-center group-hover:bg-orange-200 dark:group-hover:bg-orange-900/50">
+                        <Users className="h-5 w-5 text-orange-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Clients / Tiers</p>
+                        <p className="text-sm text-muted-foreground">{clients.length} clients à exporter</p>
+                      </div>
+                      <Download className="h-5 w-5 text-muted-foreground group-hover:text-orange-600" />
+                    </div>
+                  </button>
+
+                  {/* Export Factures */}
+                  <button
+                    onClick={handleExportInvoicesToSage}
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-green-500 hover:bg-green-50 dark:hover:bg-green-900/20 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-green-100 dark:bg-green-900/30 flex items-center justify-center group-hover:bg-green-200 dark:group-hover:bg-green-900/50">
+                        <FileText className="h-5 w-5 text-green-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Factures</p>
+                        <p className="text-sm text-muted-foreground">{invoiceList.length} factures à exporter</p>
+                      </div>
+                      <Download className="h-5 w-5 text-muted-foreground group-hover:text-green-600" />
+                    </div>
+                  </button>
+
+                  {/* Export Commandes */}
+                  <button
+                    onClick={handleExportOrdersToSage}
+                    className="w-full p-4 rounded-xl border border-slate-200 dark:border-slate-700 hover:border-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20 transition-all text-left group"
+                  >
+                    <div className="flex items-center gap-3">
+                      <div className="w-10 h-10 rounded-lg bg-blue-100 dark:bg-blue-900/30 flex items-center justify-center group-hover:bg-blue-200 dark:group-hover:bg-blue-900/50">
+                        <ShoppingCart className="h-5 w-5 text-blue-600" />
+                      </div>
+                      <div className="flex-1">
+                        <p className="font-semibold">Commandes</p>
+                        <p className="text-sm text-muted-foreground">{orderList.length} commandes à exporter</p>
+                      </div>
+                      <Download className="h-5 w-5 text-muted-foreground group-hover:text-blue-600" />
+                    </div>
+                  </button>
+                </div>
+
+                <div className="bg-amber-50 dark:bg-amber-900/20 rounded-lg p-3 border border-amber-200 dark:border-amber-800">
+                  <p className="text-sm text-amber-800 dark:text-amber-200">
+                    <strong>💡 Astuce :</strong> Les fichiers CSV sont formatés pour être directement importés dans Sage Saari. Le séparateur utilisé est le point-virgule (;).
+                  </p>
+                </div>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Import Sage */}
+      <AnimatePresence>
+        {showSageImportModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-2xl shadow-2xl overflow-hidden max-h-[90vh] overflow-y-auto"
+            >
+              <div className="p-6 bg-gradient-to-r from-blue-600 to-indigo-600">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3">
+                    <div className="w-10 h-10 bg-white/20 rounded-lg flex items-center justify-center">
+                      <Upload className="h-5 w-5 text-white" />
+                    </div>
+                    <div>
+                      <h3 className="text-xl font-bold text-white">Import Sage Saari</h3>
+                      <p className="text-white/80 text-sm">Importer des clients depuis Sage</p>
+                    </div>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => { setShowSageImportModal(false); setImportedClients([]) }} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              <div className="p-6 space-y-4">
+                {/* Zone d'upload */}
+                <div className="border-2 border-dashed border-slate-300 dark:border-slate-600 rounded-xl p-8 text-center">
+                  <Input
+                    type="file"
+                    accept=".csv,.txt"
+                    onChange={handleImportClientsFile}
+                    className="hidden"
+                    id="sage-import-clients-file"
+                  />
+                  <label htmlFor="sage-import-clients-file" className="cursor-pointer">
+                    <Upload className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                    <p className="font-medium">Cliquez pour sélectionner un fichier CSV</p>
+                    <p className="text-sm text-muted-foreground mt-1">ou glissez-déposez votre fichier ici</p>
+                  </label>
+                </div>
+
+                {/* Format attendu */}
+                <div className="bg-slate-50 dark:bg-slate-800 rounded-lg p-4">
+                  <p className="font-medium mb-2">📋 Format attendu (colonnes Sage) :</p>
+                  <div className="text-sm text-muted-foreground space-y-1">
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">CodeTiers</code> - Code unique du client</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">RaisonSociale</code> - Nom du client</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">TypeClient</code> - Type (Pharmacie, Hopital, etc.)</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">Telephone</code> - Téléphone</p>
+                    <p><code className="bg-slate-200 dark:bg-slate-700 px-1 rounded">Email</code> - Adresse email</p>
+                  </div>
+                </div>
+
+                {/* Aperçu des données importées */}
+                {importedClients.length > 0 && (
+                  <div className="space-y-3">
+                    <div className="flex items-center justify-between">
+                      <p className="font-medium">👥 Aperçu des données ({importedClients.length} clients)</p>
+                      <Badge className="bg-green-100 text-green-700">{importedClients.length} détectés</Badge>
+                    </div>
+                    <div className="max-h-48 overflow-y-auto border rounded-lg">
+                      <table className="w-full text-sm">
+                        <thead className="bg-slate-50 dark:bg-slate-800 sticky top-0">
+                          <tr>
+                            <th className="p-2 text-left">Code</th>
+                            <th className="p-2 text-left">Raison sociale</th>
+                            <th className="p-2 text-left">Type</th>
+                            <th className="p-2 text-left">Ville</th>
+                            <th className="p-2 text-right">Crédit</th>
+                          </tr>
+                        </thead>
+                        <tbody>
+                          {importedClients.slice(0, 10).map((c, i) => (
+                            <tr key={i} className="border-t">
+                              <td className="p-2 font-mono text-xs">{c.code}</td>
+                              <td className="p-2">{c.name}</td>
+                              <td className="p-2 text-muted-foreground">{c.type}</td>
+                              <td className="p-2 text-muted-foreground">{c.city}</td>
+                              <td className="p-2 text-right">{c.creditLimit?.toLocaleString()}</td>
+                            </tr>
+                          ))}
+                          {importedClients.length > 10 && (
+                            <tr className="border-t bg-slate-50 dark:bg-slate-800">
+                              <td colSpan={5} className="p-2 text-center text-muted-foreground">
+                                ... et {importedClients.length - 10} autres clients
+                              </td>
+                            </tr>
+                          )}
+                        </tbody>
+                      </table>
+                    </div>
+
+                    <div className="flex gap-3">
+                      <Button variant="outline" className="flex-1" onClick={() => setImportedClients([])}>
+                        Annuler
+                      </Button>
+                      <Button className="flex-1 gap-2" onClick={handleConfirmImportClients}>
+                        <Check className="h-4 w-4" />
+                        Importer {importedClients.length} clients
+                      </Button>
+                    </div>
+                  </div>
+                )}
               </div>
             </motion.div>
           </motion.div>
