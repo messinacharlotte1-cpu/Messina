@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useRef } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
-  Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play, Truck, Receipt
+  Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play, Truck, Receipt, Shield
 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
 import { Button } from '@/components/ui/button'
@@ -138,6 +138,129 @@ function AnimatedProgressBar({ percent, delay = 0 }: { percent: number; delay?: 
 
 type UserRole = 'dm' | 'superviseur' | 'comptabilite' | 'marketing' | 'admin'
 type Module = 'dashboard' | 'geolocation' | 'crm' | 'accounting' | 'marketing' | 'analytics' | 'settings' | 'hcp' | 'planning' | 'budget' | 'reports' | 'rh' | 'payroll' | 'my-space' | 'messages' | 'stocks' | 'sales'
+
+// Configuration des horaires d'accès par rôle
+interface AccessHoursConfig {
+  roleId: UserRole
+  roleName: string
+  startHour: string // Format "HH:MM"
+  endHour: string   // Format "HH:MM"
+  enabled: boolean
+  daysOfWeek: number[] // 0=Dimanche, 1=Lundi, ..., 6=Samedi
+}
+
+// Fuseaux horaires par pays
+const COUNTRY_TIMEZONES: Record<string, { timezone: string; offset: string; label: string }> = {
+  'Cameroun': { timezone: 'Africa/Douala', offset: 'UTC+1', label: 'Heure du Cameroun (WAT)' },
+  'Gabon': { timezone: 'Africa/Libreville', offset: 'UTC+1', label: 'Heure du Gabon (WAT)' },
+  'Congo': { timezone: 'Africa/Brazzaville', offset: 'UTC+1', label: 'Heure du Congo (WAT)' },
+  'Tchad': { timezone: 'Africa/Ndjamena', offset: 'UTC+1', label: 'Heure du Tchad (WAT)' }
+}
+
+// Jours de la semaine
+const DAYS_OF_WEEK = [
+  { value: 0, label: 'Dimanche', short: 'D' },
+  { value: 1, label: 'Lundi', short: 'L' },
+  { value: 2, label: 'Mardi', short: 'M' },
+  { value: 3, label: 'Mercredi', short: 'M' },
+  { value: 4, label: 'Jeudi', short: 'J' },
+  { value: 5, label: 'Vendredi', short: 'V' },
+  { value: 6, label: 'Samedi', short: 'S' }
+]
+
+// Configuration par défaut des horaires d'accès
+const DEFAULT_ACCESS_HOURS: AccessHoursConfig[] = [
+  { roleId: 'dm', roleName: 'Délégué Médical', startHour: '08:00', endHour: '18:00', enabled: true, daysOfWeek: [1, 2, 3, 4, 5] },
+  { roleId: 'superviseur', roleName: 'Superviseur', startHour: '07:00', endHour: '19:00', enabled: true, daysOfWeek: [1, 2, 3, 4, 5, 6] },
+  { roleId: 'comptabilite', roleName: 'Comptabilité', startHour: '08:00', endHour: '17:00', enabled: true, daysOfWeek: [1, 2, 3, 4, 5] },
+  { roleId: 'marketing', roleName: 'Marketing', startHour: '08:00', endHour: '18:00', enabled: true, daysOfWeek: [1, 2, 3, 4, 5] },
+  { roleId: 'admin', roleName: 'Administrateur', startHour: '00:00', endHour: '23:59', enabled: false, daysOfWeek: [0, 1, 2, 3, 4, 5, 6] } // Accès total pour admin
+]
+
+// Vérifier si l'utilisateur a accès à l'heure actuelle
+const checkUserAccess = (
+  role: UserRole, 
+  country: string, 
+  accessHours: AccessHoursConfig[]
+): { hasAccess: boolean; reason: string; remainingMinutes?: number } => {
+  const config = accessHours.find(ah => ah.roleId === role)
+  
+  // Si pas de config ou désactivé, accès total
+  if (!config || !config.enabled) {
+    return { hasAccess: true, reason: 'Accès autorisé' }
+  }
+  
+  // Obtenir l'heure dans le fuseau horaire du pays
+  const timezone = COUNTRY_TIMEZONES[country]?.timezone || 'Africa/Douala'
+  const now = new Date()
+  
+  // Formater l'heure dans le fuseau horaire du pays
+  const options: Intl.DateTimeFormatOptions = {
+    timeZone: timezone,
+    hour: '2-digit',
+    minute: '2-digit',
+    weekday: 'numeric',
+    hour12: false
+  }
+  
+  const formatter = new Intl.DateTimeFormat('fr-FR', options)
+  const parts = formatter.formatToParts(now)
+  
+  let currentHour = 0
+  let currentMinute = 0
+  let dayOfWeek = 1
+  
+  parts.forEach(part => {
+    if (part.type === 'hour') currentHour = parseInt(part.value)
+    if (part.type === 'minute') currentMinute = parseInt(part.value)
+    if (part.type === 'weekday') {
+      // En français: lun.=1, mar.=2, mer.=3, jeu.=4, ven.=5, sam.=6, dim.=0
+      const dayMap: Record<string, number> = {
+        'dim.': 0, 'lun.': 1, 'mar.': 2, 'mer.': 3, 'jeu.': 4, 'ven.': 5, 'sam.': 6
+      }
+      dayOfWeek = dayMap[part.value] ?? 1
+    }
+  })
+  
+  // Vérifier le jour de la semaine
+  if (!config.daysOfWeek.includes(dayOfWeek)) {
+    const dayName = DAYS_OF_WEEK.find(d => d.value === dayOfWeek)?.label || 'ce jour'
+    return { hasAccess: false, reason: `Accès non autorisé le ${dayName}` }
+  }
+  
+  // Convertir en minutes pour faciliter la comparaison
+  const currentMinutes = currentHour * 60 + currentMinute
+  const [startH, startM] = config.startHour.split(':').map(Number)
+  const [endH, endM] = config.endHour.split(':').map(Number)
+  const startMinutes = startH * 60 + startM
+  const endMinutes = endH * 60 + endM
+  
+  // Vérifier l'heure
+  if (currentMinutes < startMinutes) {
+    const remainingMinutes = startMinutes - currentMinutes
+    return { 
+      hasAccess: false, 
+      reason: `Accès autorisé à partir de ${config.startHour}`,
+      remainingMinutes
+    }
+  }
+  
+  if (currentMinutes > endMinutes) {
+    return { 
+      hasAccess: false, 
+      reason: `Accès terminé à ${config.endHour}. Revenez demain.` 
+    }
+  }
+  
+  // Calculer le temps restant
+  const remainingMinutes = endMinutes - currentMinutes
+  
+  return { 
+    hasAccess: true, 
+    reason: `Accès autorisé jusqu'à ${config.endHour}`,
+    remainingMinutes
+  }
+}
 
 interface UserType {
   id: string
@@ -10578,8 +10701,44 @@ function SettingsModule() {
   const [hcps, setHCPs] = useState<HCP[]>(initialHCPs)
   const [editingHCP, setEditingHCP] = useState<HCP | null>(null)
   const [showHCPForm, setShowHCPForm] = useState(false)
-  const [activeTab, setActiveTab] = useState<'users' | 'hcp' | 'config'>('users')
+  const [activeTab, setActiveTab] = useState<'users' | 'hcp' | 'config' | 'access-hours'>('users')
   const { toast } = useToast()
+  
+  // État pour les horaires d'accès
+  const [accessHours, setAccessHours] = useState<AccessHoursConfig[]>(() => {
+    if (typeof window !== 'undefined') {
+      const saved = localStorage.getItem('pharmalink_access_hours')
+      return saved ? JSON.parse(saved) : DEFAULT_ACCESS_HOURS
+    }
+    return DEFAULT_ACCESS_HOURS
+  })
+  
+  // Sauvegarder les horaires d'accès
+  const saveAccessHours = (newConfig: AccessHoursConfig[]) => {
+    setAccessHours(newConfig)
+    localStorage.setItem('pharmalink_access_hours', JSON.stringify(newConfig))
+    toast({ title: 'Configuration enregistrée', description: 'Les horaires d\'accès ont été mis à jour' })
+  }
+  
+  // Mettre à jour une configuration
+  const updateAccessHour = (roleId: UserRole, field: keyof AccessHoursConfig, value: string | boolean | number[]) => {
+    const newConfig = accessHours.map(ah => 
+      ah.roleId === roleId ? { ...ah, [field]: value } : ah
+    )
+    saveAccessHours(newConfig)
+  }
+  
+  // Basculer un jour de la semaine
+  const toggleDay = (roleId: UserRole, day: number) => {
+    const config = accessHours.find(ah => ah.roleId === roleId)
+    if (!config) return
+    
+    const newDays = config.daysOfWeek.includes(day)
+      ? config.daysOfWeek.filter(d => d !== day)
+      : [...config.daysOfWeek, day].sort()
+    
+    updateAccessHour(roleId, 'daysOfWeek', newDays)
+  }
 
   const handleSaveHCP = (hcp: HCP) => {
     if (editingHCP) {
@@ -10610,22 +10769,28 @@ function SettingsModule() {
         <p className="text-muted-foreground">Configuration de la plateforme</p>
       </motion.div>
 
-      <motion.div variants={fadeIn} className="flex gap-2 border-b">
+      <motion.div variants={fadeIn} className="flex gap-2 border-b overflow-x-auto">
         <button
           onClick={() => setActiveTab('users')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+          className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'users' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
         >
           <Users className="h-4 w-4 inline mr-2" />Utilisateurs
         </button>
         <button
           onClick={() => setActiveTab('hcp')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === 'hcp' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+          className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'hcp' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
         >
           <Stethoscope className="h-4 w-4 inline mr-2" />Professionnels de Santé
         </button>
         <button
+          onClick={() => setActiveTab('access-hours')}
+          className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'access-hours' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+        >
+          <Clock className="h-4 w-4 inline mr-2" />Horaires d'Accès
+        </button>
+        <button
           onClick={() => setActiveTab('config')}
-          className={`px-4 py-2 font-medium border-b-2 transition-colors ${activeTab === 'config' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
+          className={`px-4 py-2 font-medium border-b-2 transition-colors whitespace-nowrap ${activeTab === 'config' ? 'border-primary text-primary' : 'border-transparent text-muted-foreground'}`}
         >
           <Settings className="h-4 w-4 inline mr-2" />Configuration
         </button>
@@ -10822,6 +10987,192 @@ function SettingsModule() {
                 </motion.div>
               )}
             </AnimatePresence>
+          </motion.div>
+        )}
+
+        {activeTab === 'access-hours' && (
+          <motion.div
+            key="access-hours"
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -20 }}
+            className="space-y-6"
+          >
+            {/* En-tête avec explication */}
+            <Card className="bg-gradient-to-r from-blue-50 to-indigo-50 dark:from-blue-950/30 dark:to-indigo-950/30 border-blue-200 dark:border-blue-800">
+              <CardContent className="p-4">
+                <div className="flex items-start gap-3">
+                  <Clock className="h-6 w-6 text-blue-600 mt-0.5" />
+                  <div>
+                    <h3 className="font-semibold text-blue-900 dark:text-blue-100">Contrôle d'Accès Horaire</h3>
+                    <p className="text-sm text-blue-700 dark:text-blue-300 mt-1">
+                      Définissez les plages horaires pendant lesquelles chaque type d'utilisateur peut accéder à la plateforme. 
+                      Les utilisateurs connectés hors de ces plages seront automatiquement déconnectés.
+                    </p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Information sur les fuseaux horaires */}
+            <Card>
+              <CardHeader className="pb-3">
+                <CardTitle className="text-lg flex items-center gap-2">
+                  <Globe className="h-5 w-5" />
+                  Fuseaux Horaires par Pays
+                </CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="grid grid-cols-2 md:grid-cols-4 gap-4">
+                  {Object.entries(COUNTRY_TIMEZONES).map(([country, tz]) => (
+                    <div key={country} className="p-3 bg-muted/50 rounded-lg text-center">
+                      <p className="font-medium">{country}</p>
+                      <p className="text-xs text-muted-foreground">{tz.offset}</p>
+                      <p className="text-xs text-muted-foreground">{tz.label}</p>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
+
+            {/* Configuration par rôle */}
+            <div className="space-y-4">
+              {accessHours.map((config) => (
+                <Card key={config.roleId} className="overflow-hidden">
+                  <div className={`h-1 bg-gradient-to-r ${
+                    config.roleId === 'dm' ? 'from-blue-500 to-cyan-500' :
+                    config.roleId === 'superviseur' ? 'from-purple-500 to-violet-500' :
+                    config.roleId === 'comptabilite' ? 'from-green-500 to-emerald-500' :
+                    config.roleId === 'marketing' ? 'from-orange-500 to-amber-500' :
+                    'from-red-500 to-rose-500'
+                  }`} />
+                  <CardHeader className="pb-3">
+                    <div className="flex items-center justify-between">
+                      <div className="flex items-center gap-3">
+                        <div className={`w-10 h-10 rounded-lg flex items-center justify-center ${
+                          config.roleId === 'dm' ? 'bg-blue-100 dark:bg-blue-900/30' :
+                          config.roleId === 'superviseur' ? 'bg-purple-100 dark:bg-purple-900/30' :
+                          config.roleId === 'comptabilite' ? 'bg-green-100 dark:bg-green-900/30' :
+                          config.roleId === 'marketing' ? 'bg-orange-100 dark:bg-orange-900/30' :
+                          'bg-red-100 dark:bg-red-900/30'
+                        }`}>
+                          {config.roleId === 'dm' && <User className="h-5 w-5 text-blue-600" />}
+                          {config.roleId === 'superviseur' && <Users className="h-5 w-5 text-purple-600" />}
+                          {config.roleId === 'comptabilite' && <DollarSign className="h-5 w-5 text-green-600" />}
+                          {config.roleId === 'marketing' && <Megaphone className="h-5 w-5 text-orange-600" />}
+                          {config.roleId === 'admin' && <Shield className="h-5 w-5 text-red-600" />}
+                        </div>
+                        <div>
+                          <CardTitle className="text-lg">{config.roleName}</CardTitle>
+                          <p className="text-xs text-muted-foreground">
+                            {config.enabled ? 'Contrôle horaire activé' : 'Accès sans restriction'}
+                          </p>
+                        </div>
+                      </div>
+                      <label className="flex items-center gap-2 cursor-pointer">
+                        <span className="text-sm text-muted-foreground">Activer contrôle</span>
+                        <div className="relative">
+                          <input
+                            type="checkbox"
+                            checked={config.enabled}
+                            onChange={(e) => updateAccessHour(config.roleId, 'enabled', e.target.checked)}
+                            className="sr-only peer"
+                          />
+                          <div className="w-11 h-6 bg-gray-200 peer-focus:outline-none peer-focus:ring-4 peer-focus:ring-primary/20 rounded-full peer dark:bg-gray-700 peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all dark:border-gray-600 peer-checked:bg-primary"></div>
+                        </div>
+                      </label>
+                    </div>
+                  </CardHeader>
+                  
+                  {config.enabled && (
+                    <CardContent className="pt-0 space-y-4">
+                      {/* Plage horaire */}
+                      <div className="grid grid-cols-2 gap-4">
+                        <div>
+                          <Label className="text-sm font-medium">Heure de début</Label>
+                          <Input
+                            type="time"
+                            value={config.startHour}
+                            onChange={(e) => updateAccessHour(config.roleId, 'startHour', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                        <div>
+                          <Label className="text-sm font-medium">Heure de fin</Label>
+                          <Input
+                            type="time"
+                            value={config.endHour}
+                            onChange={(e) => updateAccessHour(config.roleId, 'endHour', e.target.value)}
+                            className="mt-1"
+                          />
+                        </div>
+                      </div>
+
+                      {/* Jours de la semaine */}
+                      <div>
+                        <Label className="text-sm font-medium mb-2 block">Jours autorisés</Label>
+                        <div className="flex gap-1 flex-wrap">
+                          {DAYS_OF_WEEK.map((day) => (
+                            <button
+                              key={day.value}
+                              onClick={() => toggleDay(config.roleId, day.value)}
+                              className={`w-10 h-10 rounded-lg text-sm font-medium transition-all ${
+                                config.daysOfWeek.includes(day.value)
+                                  ? 'bg-primary text-primary-foreground shadow-md'
+                                  : 'bg-muted text-muted-foreground hover:bg-muted/80'
+                              }`}
+                              title={day.label}
+                            >
+                              {day.short}
+                            </button>
+                          ))}
+                        </div>
+                        <p className="text-xs text-muted-foreground mt-2">
+                          Cliquez sur un jour pour l'activer/désactiver. D=Dimanche, L=Lundi, etc.
+                        </p>
+                      </div>
+
+                      {/* Aperçu */}
+                      <div className="p-3 bg-muted/50 rounded-lg">
+                        <p className="text-sm">
+                          <strong>Accès autorisé :</strong> de <span className="text-primary font-medium">{config.startHour}</span> à{' '}
+                          <span className="text-primary font-medium">{config.endHour}</span>, {' '}
+                          {config.daysOfWeek.length === 7 
+                            ? 'tous les jours' 
+                            : config.daysOfWeek.length === 5 && !config.daysOfWeek.includes(0) && !config.daysOfWeek.includes(6)
+                            ? 'du lundi au vendredi'
+                            : config.daysOfWeek.length === 6 && !config.daysOfWeek.includes(0)
+                            ? 'du lundi au samedi'
+                            : `${config.daysOfWeek.length} jour(s) sélectionné(s)`}
+                        </p>
+                      </div>
+                    </CardContent>
+                  )}
+                  
+                  {!config.enabled && (
+                    <CardContent className="pt-0">
+                      <div className="p-4 bg-amber-50 dark:bg-amber-900/20 rounded-lg border border-amber-200 dark:border-amber-800">
+                        <p className="text-sm text-amber-700 dark:text-amber-300">
+                          <strong>⚠️ Attention :</strong> Ce rôle a un accès 24h/24, 7j/7 sans restriction horaire.
+                        </p>
+                      </div>
+                    </CardContent>
+                  )}
+                </Card>
+              ))}
+            </div>
+
+            {/* Bouton de réinitialisation */}
+            <div className="flex justify-end gap-3">
+              <Button 
+                variant="outline" 
+                onClick={() => saveAccessHours(DEFAULT_ACCESS_HOURS)}
+                className="gap-2"
+              >
+                <RefreshCw className="h-4 w-4" />
+                Réinitialiser par défaut
+              </Button>
+            </div>
           </motion.div>
         )}
 
@@ -15972,6 +16323,59 @@ export default function PharmaLinkApp() {
   const [mySpaceUnlocked, setMySpaceUnlocked] = useState(false)
   const [showSetupPinModal, setShowSetupPinModal] = useState(false)
   const [pinError, setPinError] = useState('')
+  
+  // Contrôle d'accès horaire
+  const [showAccessDeniedModal, setShowAccessDeniedModal] = useState(false)
+  const [accessDeniedReason, setAccessDeniedReason] = useState('')
+  const [accessHours, setAccessHours] = useState<AccessHoursConfig[]>(DEFAULT_ACCESS_HOURS)
+  
+  // Fonction de déconnexion (déclarée avant les useEffect qui l'utilisent)
+  const logout = () => {
+    localStorage.removeItem('pharmalink_user')
+    setUser(null)
+    setMySpaceUnlocked(false)
+    setShowAccessDeniedModal(false)
+  }
+  
+  // Charger les horaires d'accès depuis localStorage
+  useEffect(() => {
+    const saved = localStorage.getItem('pharmalink_access_hours')
+    if (saved) {
+      try {
+        // eslint-disable-next-line react-hooks/set-state-in-effect -- Nécessaire pour charger l'état initial depuis localStorage
+        setAccessHours(JSON.parse(saved))
+      } catch {
+        // Ignorer les erreurs de parsing
+      }
+    }
+  }, [])
+  
+  // Vérifier l'accès horaire périodiquement
+  useEffect(() => {
+    if (!user || !isHydrated) return
+    
+    const checkAccess = () => {
+      const result = checkUserAccess(user.role, user.country || 'Cameroun', accessHours)
+      
+      if (!result.hasAccess) {
+        setAccessDeniedReason(result.reason)
+        setShowAccessDeniedModal(true)
+        
+        // Déconnexion automatique après 5 secondes
+        setTimeout(() => {
+          logout()
+        }, 5000)
+      }
+    }
+    
+    // Vérifier immédiatement
+    checkAccess()
+    
+    // Vérifier toutes les minutes
+    const interval = setInterval(checkAccess, 60000)
+    
+    return () => clearInterval(interval)
+  }, [user, isHydrated, accessHours])
 
   // Ajouter une nouvelle demande de congé
   const handleAddLeave = (leave: Leave) => {
@@ -16003,12 +16407,6 @@ export default function PharmaLinkApp() {
       }
     }
   }, [user, isHydrated])
-
-  const logout = () => {
-    localStorage.removeItem('pharmalink_user')
-    setUser(null)
-    setMySpaceUnlocked(false) // Réinitialiser l'accès à "Mon espace"
-  }
 
   const handleUpdateProfile = (updatedUser: UserType) => {
     setUser(updatedUser)
@@ -16430,6 +16828,56 @@ export default function PharmaLinkApp() {
                   </Button>
                 </div>
               </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Modal Accès Refusé - Hors horaires */}
+      <AnimatePresence>
+        {showAccessDeniedModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/70 flex items-center justify-center z-[100] p-4"
+          >
+            <motion.div
+              initial={{ scale: 0.8, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.8, opacity: 0 }}
+              className="bg-card rounded-2xl w-full max-w-md shadow-2xl p-6 text-center"
+            >
+              <div className="w-20 h-20 bg-gradient-to-br from-red-500 to-rose-600 rounded-full flex items-center justify-center mx-auto mb-4">
+                <Clock className="h-10 w-10 text-white" />
+              </div>
+              
+              <h2 className="text-2xl font-bold text-red-600 mb-2">Accès non autorisé</h2>
+              <p className="text-muted-foreground mb-4">{accessDeniedReason}</p>
+              
+              <div className="p-4 bg-red-50 dark:bg-red-900/20 rounded-lg mb-4">
+                <p className="text-sm text-red-700 dark:text-red-300">
+                  Vous allez être automatiquement déconnecté dans quelques secondes.
+                </p>
+              </div>
+              
+              <div className="flex items-center justify-center gap-2 text-sm text-muted-foreground">
+                <Globe className="h-4 w-4" />
+                <span>
+                  Fuseau horaire : {COUNTRY_TIMEZONES[user?.country || 'Cameroun']?.label || 'WAT (UTC+1)'}
+                </span>
+              </div>
+              
+              <Button 
+                className="mt-4 w-full bg-red-600 hover:bg-red-700"
+                onClick={() => {
+                  logout()
+                  setShowAccessDeniedModal(false)
+                }}
+              >
+                <LogOut className="h-4 w-4 mr-2" />
+                Se déconnecter maintenant
+              </Button>
             </motion.div>
           </motion.div>
         )}
