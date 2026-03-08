@@ -1122,7 +1122,11 @@ const sampleARDossiers: AMMDossier[] = [
   }
 ]
 
-const AR_LABORATORIES = ['Prodipharm', 'PharmaLab', 'GastroPharm', 'NeuroPharm', 'CardioMed']
+// Liste des laboratoires combinant le module Laboratoires et les dossiers AR existants
+const AR_LABORATORIES = Array.from(new Set([
+  ...sampleLaboratories.map(lab => lab.name),
+  ...sampleARDossiers.map(d => d.laboratory)
+])).sort()
 
 // ============================================
 // SUPPLIER & PURCHASE ORDER TYPES
