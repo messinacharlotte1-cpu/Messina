@@ -12099,6 +12099,45 @@ function RegulatoryModule({ user }: { user: UserType }) {
     'urgente': 'bg-red-100 text-red-700'
   }
 
+  // Export dossier to PDF
+  const handleExportPDF = async (dossier: AMMDossier) => {
+    try {
+      toast({ title: 'Génération du PDF...', description: 'Veuillez patienter' })
+      
+      const response = await fetch('/api/regulatory/pdf', {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json'
+        },
+        body: JSON.stringify(dossier)
+      })
+      
+      if (!response.ok) {
+        throw new Error('Erreur lors de la génération du PDF')
+      }
+      
+      // Download the PDF
+      const blob = await response.blob()
+      const url = window.URL.createObjectURL(blob)
+      const link = document.createElement('a')
+      link.href = url
+      link.download = `Dossier_AMM_${dossier.id}.pdf`
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+      window.URL.revokeObjectURL(url)
+      
+      toast({ title: 'PDF généré', description: `Le dossier ${dossier.id} a été exporté en PDF` })
+    } catch (error) {
+      toast({ 
+        title: 'Erreur', 
+        description: 'Impossible de générer le PDF', 
+        variant: 'destructive' 
+      })
+      console.error('PDF export error:', error)
+    }
+  }
+
   return (
     <motion.div
       initial="hidden"
@@ -12386,6 +12425,14 @@ function RegulatoryModule({ user }: { user: UserType }) {
                                 {statusConfig.label}
                               </Badge>
                               <div className="flex gap-1">
+                                <Button 
+                                  variant="ghost" 
+                                  size="icon" 
+                                  onClick={(e) => { e.stopPropagation(); handleExportPDF(dossier) }}
+                                  title="Exporter en PDF"
+                                >
+                                  <FileSpreadsheet className="h-4 w-4" />
+                                </Button>
                                 <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditDossier(dossier) }}>
                                   <Edit className="h-4 w-4" />
                                 </Button>
@@ -12819,6 +12866,9 @@ function RegulatoryModule({ user }: { user: UserType }) {
                   </>
                 ) : (
                   <>
+                    <Button variant="outline" onClick={() => handleExportPDF(formData as AMMDossier)}>
+                      <FileSpreadsheet className="h-4 w-4 mr-2" />Exporter PDF
+                    </Button>
                     <Button variant="outline" onClick={() => handleEditDossier(formData as AMMDossier)}>
                       <Edit className="h-4 w-4 mr-2" />Modifier
                     </Button>
