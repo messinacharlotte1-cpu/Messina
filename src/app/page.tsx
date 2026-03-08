@@ -137,7 +137,7 @@ function AnimatedProgressBar({ percent, delay = 0 }: { percent: number; delay?: 
 // ============================================
 
 type UserRole = 'dm' | 'superviseur' | 'comptabilite' | 'marketing' | 'admin'
-type Module = 'dashboard' | 'geolocation' | 'crm' | 'accounting' | 'marketing' | 'analytics' | 'settings' | 'hcp' | 'planning' | 'budget' | 'reports' | 'rh' | 'payroll' | 'my-space' | 'messages' | 'stocks' | 'sales'
+type Module = 'dashboard' | 'geolocation' | 'crm' | 'accounting' | 'marketing' | 'analytics' | 'settings' | 'hcp' | 'planning' | 'budget' | 'reports' | 'rh' | 'payroll' | 'my-space' | 'messages' | 'stocks' | 'sales' | 'regulatory' | 'laboratories'
 
 // Configuration des horaires d'accès par rôle
 interface AccessHoursConfig {
@@ -670,6 +670,442 @@ interface Invoice {
   createdAt: string
   paidAt?: string
 }
+
+// ============================================
+// LABORATORIES MODULE TYPES
+// ============================================
+
+type LaboratoryStatus = 'actif' | 'inactif' | 'en_negociation' | 'suspendu'
+type LaboratoryType = 'pharmaceutique' | 'cosmetique' | 'dispositif_medical' | 'nutraceutique' | 'autre'
+type ContractStatus = 'actif' | 'expire' | 'en_renouvellement' | 'resilie' | 'en_negociation'
+
+interface LaboratoryContract {
+  id: string
+  type: 'exclusivite' | 'non_exclusivite' | 'distribution' | 'partenariat'
+  startDate: string
+  endDate: string
+  status: ContractStatus
+  products: string[]
+  territories: string[]
+  conditions?: string
+  renewalClause?: boolean
+}
+
+interface LaboratoryContact {
+  id: string
+  name: string
+  position: string
+  email: string
+  phone: string
+  isPrimary: boolean
+}
+
+interface LaboratoryDocument {
+  id: string
+  name: string
+  type: 'contrat' | 'certificat' | 'licence' | 'amm' | 'autre'
+  uploadDate: string
+  expiryDate?: string
+  fileName?: string
+}
+
+interface Laboratory {
+  id: string
+  code: string
+  name: string
+  type: LaboratoryType
+  status: LaboratoryStatus
+  country: string
+  city: string
+  address: string
+  website?: string
+  email: string
+  phone: string
+  fax?: string
+  logo?: string
+  contacts: LaboratoryContact[]
+  contracts: LaboratoryContract[]
+  documents: LaboratoryDocument[]
+  productsCount: number
+  activeProducts: number
+  ammObtained: number
+  totalRevenue: number
+  lastOrderDate?: string
+  relationshipStart: string
+  notes?: string
+  createdAt: string
+  updatedAt: string
+}
+
+// Sample Laboratories Data
+const sampleLaboratories: Laboratory[] = [
+  {
+    id: 'lab-001',
+    code: 'LAB001',
+    name: 'Sanofi',
+    type: 'pharmaceutique',
+    status: 'actif',
+    country: 'France',
+    city: 'Paris',
+    address: '54 Rue La Boétie, 75008 Paris',
+    website: 'https://www.sanofi.com',
+    email: 'contact@sanofi.com',
+    phone: '+33 1 53 77 40 00',
+    contacts: [
+      { id: 'c1', name: 'Marie Durand', position: 'Directrice Commerciale', email: 'marie.durand@sanofi.com', phone: '+33 1 53 77 40 01', isPrimary: true },
+      { id: 'c2', name: 'Pierre Martin', position: 'Responsable Export', email: 'pierre.martin@sanofi.com', phone: '+33 1 53 77 40 02', isPrimary: false }
+    ],
+    contracts: [
+      { id: 'ctr1', type: 'exclusivite', startDate: '2022-01-01', endDate: '2025-12-31', status: 'actif', products: ['Produit A', 'Produit B'], territories: ['Cameroun', 'Gabon', 'Congo'], renewalClause: true }
+    ],
+    documents: [
+      { id: 'doc1', name: 'Contrat de distribution 2022-2025', type: 'contrat', uploadDate: '2022-01-15', expiryDate: '2025-12-31' }
+    ],
+    productsCount: 15,
+    activeProducts: 12,
+    ammObtained: 10,
+    totalRevenue: 250000000,
+    lastOrderDate: '2024-02-10',
+    relationshipStart: '2018-01-01',
+    createdAt: '2018-01-01',
+    updatedAt: '2024-02-10'
+  },
+  {
+    id: 'lab-002',
+    code: 'LAB002',
+    name: 'Pfizer',
+    type: 'pharmaceutique',
+    status: 'actif',
+    country: 'États-Unis',
+    city: 'New York',
+    address: '66 Hudson Blvd, New York, NY 10001',
+    website: 'https://www.pfizer.com',
+    email: 'contact@pfizer.com',
+    phone: '+1 212 733 2323',
+    contacts: [
+      { id: 'c3', name: 'John Smith', position: 'Regional Director Africa', email: 'john.smith@pfizer.com', phone: '+1 212 733 2324', isPrimary: true }
+    ],
+    contracts: [
+      { id: 'ctr2', type: 'distribution', startDate: '2021-06-01', endDate: '2024-05-31', status: 'en_renouvellement', products: ['Vaccins', 'Antibiotiques'], territories: ['Cameroun', 'Gabon'], renewalClause: true }
+    ],
+    documents: [],
+    productsCount: 8,
+    activeProducts: 6,
+    ammObtained: 5,
+    totalRevenue: 180000000,
+    lastOrderDate: '2024-01-25',
+    relationshipStart: '2019-06-01',
+    createdAt: '2019-06-01',
+    updatedAt: '2024-01-25'
+  },
+  {
+    id: 'lab-003',
+    code: 'LAB003',
+    name: 'Novartis',
+    type: 'pharmaceutique',
+    status: 'actif',
+    country: 'Suisse',
+    city: 'Bâle',
+    address: 'Novartis Campus, CH-4056 Basel',
+    website: 'https://www.novartis.com',
+    email: 'contact@novartis.com',
+    phone: '+41 61 324 11 11',
+    contacts: [
+      { id: 'c4', name: 'Anna Müller', position: 'Responsable Zone Afrique', email: 'anna.muller@novartis.com', phone: '+41 61 324 11 12', isPrimary: true }
+    ],
+    contracts: [
+      { id: 'ctr3', type: 'non_exclusivite', startDate: '2023-01-01', endDate: '2026-12-31', status: 'actif', products: ['Oncologie', 'Cardiologie'], territories: ['Cameroun', 'Gabon', 'Congo', 'Tchad'], renewalClause: false }
+    ],
+    documents: [
+      { id: 'doc2', name: 'Agrément FDA', type: 'licence', uploadDate: '2023-02-20' }
+    ],
+    productsCount: 20,
+    activeProducts: 18,
+    ammObtained: 15,
+    totalRevenue: 320000000,
+    lastOrderDate: '2024-02-15',
+    relationshipStart: '2020-01-01',
+    createdAt: '2020-01-01',
+    updatedAt: '2024-02-15'
+  },
+  {
+    id: 'lab-004',
+    code: 'LAB004',
+    name: 'PharmaLab Morocco',
+    type: 'pharmaceutique',
+    status: 'en_negociation',
+    country: 'Maroc',
+    city: 'Casablanca',
+    address: 'Zone Industrielle, Aïn Sebaâ, Casablanca',
+    email: 'contact@pharmalab.ma',
+    phone: '+212 522 123 456',
+    contacts: [
+      { id: 'c5', name: 'Ahmed Benali', position: 'Directeur Export', email: 'ahmed.benali@pharmalab.ma', phone: '+212 522 123 457', isPrimary: true }
+    ],
+    contracts: [],
+    documents: [],
+    productsCount: 5,
+    activeProducts: 0,
+    ammObtained: 0,
+    totalRevenue: 0,
+    relationshipStart: '2024-01-01',
+    createdAt: '2024-01-15',
+    updatedAt: '2024-02-01',
+    notes: 'Négociation en cours pour un partenariat de distribution au Cameroun'
+  },
+  {
+    id: 'lab-005',
+    code: 'LAB005',
+    name: 'Galenica',
+    type: 'pharmaceutique',
+    status: 'suspendu',
+    country: 'Suisse',
+    city: 'Berne',
+    address: 'Bolligenstrasse 102, 3001 Berne',
+    website: 'https://www.galenica.com',
+    email: 'info@galenica.ch',
+    phone: '+41 58 859 80 00',
+    contacts: [],
+    contracts: [
+      { id: 'ctr4', type: 'distribution', startDate: '2020-01-01', endDate: '2023-12-31', status: 'resilie', products: ['Gélules Vitamines'], territories: ['Cameroun'], renewalClause: false }
+    ],
+    documents: [],
+    productsCount: 3,
+    activeProducts: 0,
+    ammObtained: 2,
+    totalRevenue: 45000000,
+    relationshipStart: '2020-01-01',
+    createdAt: '2020-01-01',
+    updatedAt: '2024-01-01',
+    notes: 'Contrat résilié - décision stratégique'
+  }
+]
+
+const LAB_STATUS_CONFIG: Record<LaboratoryStatus, { label: string; color: string; bgColor: string }> = {
+  'actif': { label: 'Actif', color: 'text-green-700', bgColor: 'bg-green-100' },
+  'inactif': { label: 'Inactif', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  'en_negociation': { label: 'En négociation', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  'suspendu': { label: 'Suspendu', color: 'text-red-700', bgColor: 'bg-red-100' }
+}
+
+const LAB_TYPE_LABELS: Record<LaboratoryType, string> = {
+  'pharmaceutique': 'Pharmaceutique',
+  'cosmetique': 'Cosmétique',
+  'dispositif_medical': 'Dispositif Médical',
+  'nutraceutique': 'Nutraceutique',
+  'autre': 'Autre'
+}
+
+// ============================================
+// REGULATORY AFFAIRS (AR) TYPES
+// ============================================
+
+type ARCountry = 'Cameroun' | 'Congo' | 'Gabon'
+type ARProcedureType = 'AMM' | 'Renouvellement' | 'Variation'
+type ARDossierStatus = 'a_preparer' | 'documents_en_attente' | 'documents_recus' | 'dossier_envoye' | 'en_cours_evaluation' | 'demande_complement' | 'amm_obtenue' | 'amm_refusee'
+type ARDocumentStatus = 'recu' | 'non_recu' | 'en_attente'
+
+interface ARDocument {
+  id: string
+  name: string
+  type: 'formulaire_officiel' | 'module_1' | 'dossier_ctd' | 'reception_echantillons' | 'reception_email' | 'envoi_autorites' | 'autre'
+  status: ARDocumentStatus
+  fileName?: string
+  fileSize?: number
+  uploadedAt?: string
+  uploadedBy?: string
+  notes?: string
+}
+
+interface ARHistoryEntry {
+  id: string
+  action: string
+  field?: string
+  oldValue?: string
+  newValue?: string
+  userId: string
+  userName: string
+  timestamp: string
+}
+
+interface AMMDossier {
+  id: string
+  country: ARCountry
+  productName: string
+  pharmaceuticalForm: string
+  dosage: string
+  laboratory: string
+  procedureType: ARProcedureType
+  responsibleId: string
+  responsibleName: string
+  status: ARDossierStatus
+  createdAt: string
+  updatedAt: string
+  documents: ARDocument[]
+  history: ARHistoryEntry[]
+  ammReference?: string
+  ammDate?: string
+  expiryDate?: string
+  authorityResponse?: string
+  notes?: string
+  priority: 'basse' | 'normale' | 'haute' | 'urgente'
+  expectedDate?: string
+}
+
+// AR Status Labels & Colors
+const AR_STATUS_CONFIG: Record<ARDossierStatus, { label: string; color: string; bgColor: string }> = {
+  'a_preparer': { label: 'À préparer', color: 'text-gray-700', bgColor: 'bg-gray-100' },
+  'documents_en_attente': { label: 'Documents en attente', color: 'text-amber-700', bgColor: 'bg-amber-100' },
+  'documents_recus': { label: 'Documents reçus', color: 'text-blue-700', bgColor: 'bg-blue-100' },
+  'dossier_envoye': { label: 'Dossier envoyé', color: 'text-indigo-700', bgColor: 'bg-indigo-100' },
+  'en_cours_evaluation': { label: 'En cours d\'évaluation', color: 'text-purple-700', bgColor: 'bg-purple-100' },
+  'demande_complement': { label: 'Demande de complément', color: 'text-orange-700', bgColor: 'bg-orange-100' },
+  'amm_obtenue': { label: 'AMM obtenue', color: 'text-green-700', bgColor: 'bg-green-100' },
+  'amm_refusee': { label: 'AMM refusée', color: 'text-red-700', bgColor: 'bg-red-100' }
+}
+
+const AR_PROCEDURE_LABELS: Record<ARProcedureType, string> = {
+  'AMM': 'Autorisation de Mise sur le Marché',
+  'Renouvellement': 'Renouvellement AMM',
+  'Variation': 'Variation / Modification'
+}
+
+const AR_DOCUMENT_TYPE_LABELS: Record<ARDocument['type'], string> = {
+  'formulaire_officiel': 'Formulaire officiel rempli',
+  'module_1': 'Module 1 (Document administratif)',
+  'dossier_ctd': 'Dossier CTD / eCTD',
+  'reception_echantillons': 'Réception échantillons (DHL)',
+  'reception_email': 'Réception documents par courriel',
+  'envoi_autorites': 'Envoi dossier aux autorités',
+  'autre': 'Autre document'
+}
+
+// Sample AR Data
+const sampleARDossiers: AMMDossier[] = [
+  {
+    id: 'AR-001',
+    country: 'Cameroun',
+    productName: 'Paracetamol 500mg',
+    pharmaceuticalForm: 'Comprimé',
+    dosage: '500 mg',
+    laboratory: 'Prodipharm',
+    procedureType: 'AMM',
+    responsibleId: 'dm1',
+    responsibleName: 'Marie Dupont',
+    status: 'en_cours_evaluation',
+    createdAt: '2024-01-15',
+    updatedAt: '2024-02-10',
+    documents: [
+      { id: 'doc1', name: 'Formulaire AMM Cameroun', type: 'formulaire_officiel', status: 'recu', uploadedAt: '2024-01-16', uploadedBy: 'Marie Dupont' },
+      { id: 'doc2', name: 'Module 1 - Admin', type: 'module_1', status: 'recu', uploadedAt: '2024-01-18', uploadedBy: 'Marie Dupont' },
+      { id: 'doc3', name: 'CTD Modules 2-5', type: 'dossier_ctd', status: 'recu', uploadedAt: '2024-01-20', uploadedBy: 'Marie Dupont' }
+    ],
+    history: [
+      { id: 'h1', action: 'Création du dossier', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-01-15T10:00:00' },
+      { id: 'h2', action: 'Statut modifié', field: 'status', oldValue: 'a_preparer', newValue: 'documents_recus', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-01-20T14:30:00' },
+      { id: 'h3', action: 'Statut modifié', field: 'status', oldValue: 'documents_recus', newValue: 'dossier_envoye', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-01-25T09:00:00' },
+      { id: 'h4', action: 'Statut modifié', field: 'status', oldValue: 'dossier_envoye', newValue: 'en_cours_evaluation', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-02-01T11:00:00' }
+    ],
+    priority: 'haute',
+    expectedDate: '2024-06-15'
+  },
+  {
+    id: 'AR-002',
+    country: 'Gabon',
+    productName: 'Amoxicilline 250mg',
+    pharmaceuticalForm: 'Gélule',
+    dosage: '250 mg',
+    laboratory: 'Prodipharm',
+    procedureType: 'Renouvellement',
+    responsibleId: 'dm2',
+    responsibleName: 'Jean Martin',
+    status: 'documents_en_attente',
+    createdAt: '2024-02-01',
+    updatedAt: '2024-02-05',
+    documents: [
+      { id: 'doc4', name: 'Formulaire Renouvellement', type: 'formulaire_officiel', status: 'recu', uploadedAt: '2024-02-02', uploadedBy: 'Jean Martin' },
+      { id: 'doc5', name: 'Module 1', type: 'module_1', status: 'non_recu' },
+      { id: 'doc6', name: 'Mise à jour CTD', type: 'dossier_ctd', status: 'en_attente' }
+    ],
+    history: [
+      { id: 'h5', action: 'Création du dossier', userId: 'dm2', userName: 'Jean Martin', timestamp: '2024-02-01T09:00:00' }
+    ],
+    priority: 'normale',
+    expectedDate: '2024-05-01'
+  },
+  {
+    id: 'AR-003',
+    country: 'Congo',
+    productName: 'Ibuprofène 200mg',
+    pharmaceuticalForm: 'Comprimé enrobé',
+    dosage: '200 mg',
+    laboratory: 'PharmaLab',
+    procedureType: 'AMM',
+    responsibleId: 'dm1',
+    responsibleName: 'Marie Dupont',
+    status: 'amm_obtenue',
+    createdAt: '2023-09-01',
+    updatedAt: '2024-01-20',
+    documents: [
+      { id: 'doc7', name: 'Dossier complet', type: 'formulaire_officiel', status: 'recu', uploadedAt: '2023-09-05', uploadedBy: 'Marie Dupont' },
+      { id: 'doc8', name: 'CTD complet', type: 'dossier_ctd', status: 'recu', uploadedAt: '2023-09-10', uploadedBy: 'Marie Dupont' }
+    ],
+    history: [
+      { id: 'h6', action: 'Création du dossier', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2023-09-01T08:00:00' },
+      { id: 'h7', action: 'AMM obtenue', field: 'status', oldValue: 'en_cours_evaluation', newValue: 'amm_obtenue', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-01-20T16:00:00' }
+    ],
+    ammReference: 'AMM-CG-2024-001',
+    ammDate: '2024-01-20',
+    expiryDate: '2029-01-20',
+    priority: 'normale'
+  },
+  {
+    id: 'AR-004',
+    country: 'Cameroun',
+    productName: 'Metformine 500mg',
+    pharmaceuticalForm: 'Comprimé',
+    dosage: '500 mg',
+    laboratory: 'Prodipharm',
+    procedureType: 'Variation',
+    responsibleId: 'dm2',
+    responsibleName: 'Jean Martin',
+    status: 'demande_complement',
+    createdAt: '2023-11-15',
+    updatedAt: '2024-02-08',
+    documents: [
+      { id: 'doc9', name: 'Formulaire variation', type: 'formulaire_officiel', status: 'recu', uploadedAt: '2023-11-16', uploadedBy: 'Jean Martin' },
+      { id: 'doc10', name: 'Données de stabilité', type: 'dossier_ctd', status: 'non_recu' }
+    ],
+    history: [
+      { id: 'h8', action: 'Création du dossier', userId: 'dm2', userName: 'Jean Martin', timestamp: '2023-11-15T10:00:00' },
+      { id: 'h9', action: 'Demande de complément reçue', field: 'status', oldValue: 'en_cours_evaluation', newValue: 'demande_complement', userId: 'dm2', userName: 'Jean Martin', timestamp: '2024-02-08T14:00:00' }
+    ],
+    authorityResponse: 'Données de stabilité complémentaires requises',
+    priority: 'haute',
+    expectedDate: '2024-03-15'
+  },
+  {
+    id: 'AR-005',
+    country: 'Gabon',
+    productName: 'Omeprazole 20mg',
+    pharmaceuticalForm: 'Gélule gastro-résistante',
+    dosage: '20 mg',
+    laboratory: 'GastroPharm',
+    procedureType: 'AMM',
+    responsibleId: 'dm1',
+    responsibleName: 'Marie Dupont',
+    status: 'a_preparer',
+    createdAt: '2024-02-15',
+    updatedAt: '2024-02-15',
+    documents: [],
+    history: [
+      { id: 'h10', action: 'Création du dossier', userId: 'dm1', userName: 'Marie Dupont', timestamp: '2024-02-15T09:00:00' }
+    ],
+    priority: 'normale'
+  }
+]
+
+const AR_LABORATORIES = ['Prodipharm', 'PharmaLab', 'GastroPharm', 'NeuroPharm', 'CardioMed']
 
 // ============================================
 // SUPPLIER & PURCHASE ORDER TYPES
@@ -11248,6 +11684,1738 @@ function SettingsModule() {
 }
 
 // ============================================
+// REGULATORY AFFAIRS MODULE (AR)
+// ============================================
+
+function RegulatoryModule({ user }: { user: UserType }) {
+  const [dossiers, setDossiers] = useState<AMMDossier[]>(sampleARDossiers)
+  const [selectedDossier, setSelectedDossier] = useState<AMMDossier | null>(null)
+  const [showDossierModal, setShowDossierModal] = useState(false)
+  const [showDocumentModal, setShowDocumentModal] = useState(false)
+  const [showHistoryModal, setShowHistoryModal] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isNewDossier, setIsNewDossier] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'dossiers' | 'calendar'>('dashboard')
+
+  // Filters
+  const [countryFilter, setCountryFilter] = useState<ARCountry | 'all'>('all')
+  const [labFilter, setLabFilter] = useState<string>('all')
+  const [statusFilter, setStatusFilter] = useState<ARDossierStatus | 'all'>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const { toast } = useToast()
+
+  // Form state
+  const [formData, setFormData] = useState<Partial<AMMDossier>>({})
+
+  // Filter dossiers
+  const filteredDossiers = dossiers.filter(d => {
+    const matchCountry = countryFilter === 'all' || d.country === countryFilter
+    const matchLab = labFilter === 'all' || d.laboratory === labFilter
+    const matchStatus = statusFilter === 'all' || d.status === statusFilter
+    const matchSearch = d.productName.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        d.id.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        d.laboratory.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchCountry && matchLab && matchStatus && matchSearch
+  })
+
+  // Statistics
+  const stats = {
+    total: dossiers.length,
+    byCountry: {
+      Cameroun: dossiers.filter(d => d.country === 'Cameroun').length,
+      Congo: dossiers.filter(d => d.country === 'Congo').length,
+      Gabon: dossiers.filter(d => d.country === 'Gabon').length
+    },
+    byStatus: {
+      inProgress: dossiers.filter(d => !['amm_obtenue', 'amm_refusee'].includes(d.status)).length,
+      obtained: dossiers.filter(d => d.status === 'amm_obtenue').length,
+      refused: dossiers.filter(d => d.status === 'amm_refusee').length,
+      pendingDocs: dossiers.filter(d => ['a_preparer', 'documents_en_attente'].includes(d.status)).length
+    },
+    urgent: dossiers.filter(d => d.priority === 'urgente' || d.priority === 'haute').length,
+    nearExpiry: dossiers.filter(d => {
+      if (!d.expiryDate) return false
+      const expDate = new Date(d.expiryDate)
+      const sixMonthsFromNow = new Date()
+      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+      return expDate <= sixMonthsFromNow
+    }).length
+  }
+
+  // Open new dossier form
+  const handleNewDossier = () => {
+    setFormData({
+      id: `AR-${String(dossiers.length + 1).padStart(3, '0')}`,
+      country: 'Cameroun',
+      status: 'a_preparer',
+      priority: 'normale',
+      documents: [],
+      history: [],
+      responsibleId: user.id,
+      responsibleName: user.name,
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0]
+    })
+    setIsNewDossier(true)
+    setIsEditing(true)
+    setShowDossierModal(true)
+  }
+
+  // Open edit dossier
+  const handleEditDossier = (dossier: AMMDossier) => {
+    setFormData({ ...dossier })
+    setIsNewDossier(false)
+    setIsEditing(true)
+    setShowDossierModal(true)
+  }
+
+  // View dossier details
+  const handleViewDossier = (dossier: AMMDossier) => {
+    setSelectedDossier(dossier)
+    setIsEditing(false)
+    setShowDossierModal(true)
+  }
+
+  // Save dossier
+  const handleSaveDossier = () => {
+    if (!formData.productName || !formData.laboratory) {
+      toast({ title: 'Erreur', description: 'Veuillez remplir les champs obligatoires', variant: 'destructive' })
+      return
+    }
+
+    const now = new Date().toISOString()
+    const historyEntry: ARHistoryEntry = {
+      id: `h-${Date.now()}`,
+      action: isNewDossier ? 'Création du dossier' : 'Modification du dossier',
+      userId: user.id,
+      userName: user.name,
+      timestamp: now
+    }
+
+    if (isNewDossier) {
+      const newDossier: AMMDossier = {
+        ...formData as AMMDossier,
+        history: [historyEntry]
+      }
+      setDossiers([...dossiers, newDossier])
+      toast({ title: 'Dossier créé', description: `Le dossier ${newDossier.id} a été créé` })
+    } else {
+      setDossiers(dossiers.map(d =>
+        d.id === formData.id
+          ? { ...formData as AMMDossier, updatedAt: now.split('T')[0], history: [...d.history, historyEntry] }
+          : d
+      ))
+      toast({ title: 'Dossier mis à jour', description: `Le dossier ${formData.id} a été modifié` })
+    }
+
+    setShowDossierModal(false)
+    setFormData({})
+  }
+
+  // Update dossier status
+  const handleUpdateStatus = (dossierId: string, newStatus: ARDossierStatus) => {
+    const now = new Date().toISOString()
+    const historyEntry: ARHistoryEntry = {
+      id: `h-${Date.now()}`,
+      action: 'Statut modifié',
+      field: 'status',
+      oldValue: dossiers.find(d => d.id === dossierId)?.status,
+      newValue: newStatus,
+      userId: user.id,
+      userName: user.name,
+      timestamp: now
+    }
+
+    setDossiers(dossiers.map(d =>
+      d.id === dossierId
+        ? { ...d, status: newStatus, updatedAt: now.split('T')[0], history: [...d.history, historyEntry] }
+        : d
+    ))
+    toast({ title: 'Statut mis à jour', description: `Le statut a été changé vers "${AR_STATUS_CONFIG[newStatus].label}"` })
+  }
+
+  // Add document to dossier
+  const handleAddDocument = (dossierId: string, doc: ARDocument) => {
+    const now = new Date().toISOString()
+    const historyEntry: ARHistoryEntry = {
+      id: `h-${Date.now()}`,
+      action: `Document ajouté: ${doc.name}`,
+      userId: user.id,
+      userName: user.name,
+      timestamp: now
+    }
+
+    setDossiers(dossiers.map(d =>
+      d.id === dossierId
+        ? { ...d, documents: [...d.documents, doc], history: [...d.history, historyEntry], updatedAt: now.split('T')[0] }
+        : d
+    ))
+    toast({ title: 'Document ajouté', description: 'Le document a été ajouté au dossier' })
+  }
+
+  // Update document status
+  const handleUpdateDocumentStatus = (dossierId: string, docId: string, status: ARDocumentStatus) => {
+    setDossiers(dossiers.map(d => {
+      if (d.id === dossierId) {
+        return {
+          ...d,
+          documents: d.documents.map(doc =>
+            doc.id === docId
+              ? { ...doc, status, uploadedAt: status === 'recu' ? new Date().toISOString() : doc.uploadedAt }
+              : doc
+          )
+        }
+      }
+      return d
+    }))
+  }
+
+  // Country flags
+  const countryFlags: Record<ARCountry, string> = {
+    'Cameroun': '🇨🇲',
+    'Congo': '🇨🇬',
+    'Gabon': '🇬🇦'
+  }
+
+  // Priority colors
+  const priorityColors: Record<AMMDossier['priority'], string> = {
+    'basse': 'bg-gray-100 text-gray-700',
+    'normale': 'bg-blue-100 text-blue-700',
+    'haute': 'bg-orange-100 text-orange-700',
+    'urgente': 'bg-red-100 text-red-700'
+  }
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-emerald-500 to-teal-600 rounded-xl flex items-center justify-center shadow-lg">
+            <FileText className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Affaires Réglementaires</h1>
+            <p className="text-muted-foreground">Gestion des dossiers AMM multi-pays</p>
+          </div>
+        </div>
+        <div className="flex gap-2">
+          <Button className="gap-2" onClick={handleNewDossier}>
+            <Plus className="h-4 w-4" />Nouveau dossier
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div variants={fadeIn} className="flex gap-2 border-b pb-2">
+        {[
+          { id: 'dashboard' as const, label: 'Tableau de bord', icon: BarChart3 },
+          { id: 'dossiers' as const, label: 'Dossiers', icon: FileText },
+          { id: 'calendar' as const, label: 'Échéances', icon: Calendar }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-all ${
+              activeTab === tab.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+        <motion.div variants={fadeInUp} className="space-y-6">
+          {/* Stats by Country */}
+          <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
+            {(['Cameroun', 'Congo', 'Gabon'] as ARCountry[]).map(country => (
+              <Card key={country} className="overflow-hidden">
+                <div className="bg-gradient-to-r from-emerald-500 to-teal-600 p-4">
+                  <div className="flex items-center justify-between text-white">
+                    <span className="text-lg font-medium">{countryFlags[country]} {country}</span>
+                    <span className="text-3xl font-bold">{stats.byCountry[country]}</span>
+                  </div>
+                </div>
+                <CardContent className="p-4">
+                  <div className="space-y-2 text-sm">
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">En cours</span>
+                      <span className="font-medium">
+                        {dossiers.filter(d => d.country === country && !['amm_obtenue', 'amm_refusee'].includes(d.status)).length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">AMM obtenues</span>
+                      <span className="font-medium text-green-600">
+                        {dossiers.filter(d => d.country === country && d.status === 'amm_obtenue').length}
+                      </span>
+                    </div>
+                    <div className="flex justify-between">
+                      <span className="text-muted-foreground">En attente docs</span>
+                      <span className="font-medium text-amber-600">
+                        {dossiers.filter(d => d.country === country && ['a_preparer', 'documents_en_attente'].includes(d.status)).length}
+                      </span>
+                    </div>
+                  </div>
+                </CardContent>
+              </Card>
+            ))}
+          </div>
+
+          {/* Quick Stats */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-purple-100">
+                    <Clock className="h-5 w-5 text-purple-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.byStatus.inProgress}</p>
+                    <p className="text-xs text-muted-foreground">En cours</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.byStatus.obtained}</p>
+                    <p className="text-xs text-muted-foreground">AMM obtenues</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.urgent}</p>
+                    <p className="text-xs text-muted-foreground">Priorité haute</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-orange-100">
+                    <TrendingDown className="h-5 w-5 text-orange-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.nearExpiry}</p>
+                    <p className="text-xs text-muted-foreground">Expiration &lt;6 mois</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Status Distribution */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Répartition par statut</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {(Object.keys(AR_STATUS_CONFIG) as ARDossierStatus[]).map(status => {
+                  const count = dossiers.filter(d => d.status === status).length
+                  const percentage = dossiers.length > 0 ? (count / dossiers.length) * 100 : 0
+                  const config = AR_STATUS_CONFIG[status]
+                  return (
+                    <div key={status} className="space-y-1">
+                      <div className="flex justify-between text-sm">
+                        <span className={config.color}>{config.label}</span>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                      <div className="w-full bg-gray-100 rounded-full h-2">
+                        <div
+                          className={`h-2 rounded-full ${config.bgColor.replace('bg-', 'bg-opacity-60 bg-')}`}
+                          style={{ width: `${percentage}%` }}
+                        />
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Dossiers Tab */}
+      {activeTab === 'dossiers' && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Recherche</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Produit, ID, Labo..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Pays</Label>
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value as ARCountry | 'all')}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous les pays</option>
+                    <option value="Cameroun">🇨🇲 Cameroun</option>
+                    <option value="Congo">🇨🇬 Congo</option>
+                    <option value="Gabon">🇬🇦 Gabon</option>
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Laboratoire</Label>
+                  <select
+                    value={labFilter}
+                    onChange={(e) => setLabFilter(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous les labos</option>
+                    {AR_LABORATORIES.map(lab => (
+                      <option key={lab} value={lab}>{lab}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Statut</Label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as ARDossierStatus | 'all')}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous les statuts</option>
+                    {(Object.keys(AR_STATUS_CONFIG) as ARDossierStatus[]).map(status => (
+                      <option key={status} value={status}>{AR_STATUS_CONFIG[status].label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Dossiers List */}
+          <div className="space-y-3">
+            {filteredDossiers.length === 0 ? (
+              <Card>
+                <CardContent className="p-8 text-center">
+                  <FileText className="h-12 w-12 mx-auto text-muted-foreground mb-4" />
+                  <p className="text-muted-foreground">Aucun dossier trouvé</p>
+                </CardContent>
+              </Card>
+            ) : (
+              filteredDossiers.map((dossier, i) => {
+                const statusConfig = AR_STATUS_CONFIG[dossier.status]
+                return (
+                  <motion.div
+                    key={dossier.id}
+                    initial={{ opacity: 0, y: 20 }}
+                    animate={{ opacity: 1, y: 0 }}
+                    transition={{ delay: i * 0.05 }}
+                  >
+                    <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewDossier(dossier)}>
+                      <div className="flex">
+                        {/* Country indicator */}
+                        <div className={`w-2 ${dossier.country === 'Cameroun' ? 'bg-green-500' : dossier.country === 'Congo' ? 'bg-blue-500' : 'bg-yellow-500'}`} />
+
+                        <CardContent className="flex-1 p-4">
+                          <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                            <div className="flex items-start gap-3">
+                              <div className="text-2xl">{countryFlags[dossier.country]}</div>
+                              <div>
+                                <div className="flex items-center gap-2">
+                                  <span className="font-mono text-sm text-muted-foreground">{dossier.id}</span>
+                                  <Badge className={priorityColors[dossier.priority]}>
+                                    {dossier.priority}
+                                  </Badge>
+                                </div>
+                                <h3 className="font-semibold">{dossier.productName}</h3>
+                                <div className="flex flex-wrap gap-2 text-sm text-muted-foreground">
+                                  <span>{dossier.pharmaceuticalForm} - {dossier.dosage}</span>
+                                  <span>•</span>
+                                  <span>{dossier.laboratory}</span>
+                                  <span>•</span>
+                                  <span>{AR_PROCEDURE_LABELS[dossier.procedureType]}</span>
+                                </div>
+                              </div>
+                            </div>
+
+                            <div className="flex items-center gap-3">
+                              <Badge className={`${statusConfig.bgColor} ${statusConfig.color} border`}>
+                                {statusConfig.label}
+                              </Badge>
+                              <div className="flex gap-1">
+                                <Button variant="ghost" size="icon" onClick={(e) => { e.stopPropagation(); handleEditDossier(dossier) }}>
+                                  <Edit className="h-4 w-4" />
+                                </Button>
+                              </div>
+                            </div>
+                          </div>
+
+                          {/* Documents progress */}
+                          <div className="mt-3 flex items-center gap-4 text-sm">
+                            <div className="flex items-center gap-1">
+                              <FileText className="h-4 w-4 text-muted-foreground" />
+                              <span>{dossier.documents.filter(d => d.status === 'recu').length}/{dossier.documents.length} documents</span>
+                            </div>
+                            <div className="flex items-center gap-1">
+                              <User className="h-4 w-4 text-muted-foreground" />
+                              <span>{dossier.responsibleName}</span>
+                            </div>
+                            {dossier.expectedDate && (
+                              <div className="flex items-center gap-1">
+                                <Calendar className="h-4 w-4 text-muted-foreground" />
+                                <span>Échéance: {new Date(dossier.expectedDate).toLocaleDateString('fr-FR')}</span>
+                              </div>
+                            )}
+                          </div>
+                        </CardContent>
+                      </div>
+                    </Card>
+                  </motion.div>
+                )
+              })
+            )}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Calendar Tab */}
+      {activeTab === 'calendar' && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Échéances à venir</CardTitle>
+              <CardDescription>Dossiers avec dates d'échéance prévues</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {dossiers
+                  .filter(d => d.expectedDate)
+                  .sort((a, b) => new Date(a.expectedDate!).getTime() - new Date(b.expectedDate!).getTime())
+                  .map(dossier => {
+                    const daysUntil = Math.ceil((new Date(dossier.expectedDate!).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                    const isUrgent = daysUntil < 30
+                    return (
+                      <div key={dossier.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{countryFlags[dossier.country]}</span>
+                          <div>
+                            <p className="font-medium">{dossier.productName}</p>
+                            <p className="text-sm text-muted-foreground">{dossier.id} - {dossier.laboratory}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className={`font-medium ${isUrgent ? 'text-red-600' : ''}`}>
+                            {new Date(dossier.expectedDate!).toLocaleDateString('fr-FR')}
+                          </p>
+                          <p className={`text-sm ${isUrgent ? 'text-red-500' : 'text-muted-foreground'}`}>
+                            {daysUntil > 0 ? `Dans ${daysUntil} jours` : 'Dépassée'}
+                          </p>
+                        </div>
+                      </div>
+                    )
+                  })}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Expiring AMMs */}
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2">
+                <AlertTriangle className="h-5 w-5 text-orange-500" />
+                AMM proches de l'expiration
+              </CardTitle>
+              <CardDescription>AMM expirant dans les 6 prochains mois</CardDescription>
+            </CardHeader>
+            <CardContent>
+              {dossiers.filter(d => {
+                if (!d.expiryDate || d.status !== 'amm_obtenue') return false
+                const expDate = new Date(d.expiryDate)
+                const sixMonthsFromNow = new Date()
+                sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+                return expDate <= sixMonthsFromNow
+              }).length === 0 ? (
+                <p className="text-muted-foreground text-center py-4">Aucune AMM proche de l'expiration</p>
+              ) : (
+                <div className="space-y-3">
+                  {dossiers
+                    .filter(d => {
+                      if (!d.expiryDate || d.status !== 'amm_obtenue') return false
+                      const expDate = new Date(d.expiryDate)
+                      const sixMonthsFromNow = new Date()
+                      sixMonthsFromNow.setMonth(sixMonthsFromNow.getMonth() + 6)
+                      return expDate <= sixMonthsFromNow
+                    })
+                    .map(dossier => (
+                      <div key={dossier.id} className="flex items-center justify-between p-3 bg-orange-50 border border-orange-200 rounded-lg">
+                        <div className="flex items-center gap-3">
+                          <span className="text-xl">{countryFlags[dossier.country]}</span>
+                          <div>
+                            <p className="font-medium">{dossier.productName}</p>
+                            <p className="text-sm text-muted-foreground">{dossier.ammReference}</p>
+                          </div>
+                        </div>
+                        <div className="text-right">
+                          <p className="font-medium text-orange-600">
+                            {new Date(dossier.expiryDate!).toLocaleDateString('fr-FR')}
+                          </p>
+                          <Button size="sm" variant="outline" className="mt-1">
+                            Renouveler
+                          </Button>
+                        </div>
+                      </div>
+                    ))}
+                </div>
+              )}
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Dossier Modal */}
+      <AnimatePresence>
+        {showDossierModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => setShowDossierModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-xl w-full max-w-4xl shadow-2xl my-8"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-emerald-600 to-teal-600 p-6 rounded-t-xl">
+                <div className="flex items-center justify-between">
+                  <div className="flex items-center gap-3 text-white">
+                    <FileText className="h-6 w-6" />
+                    <h2 className="text-xl font-bold">
+                      {isNewDossier ? 'Nouveau Dossier AMM' : isEditing ? 'Modifier le Dossier' : `Dossier ${formData.id}`}
+                    </h2>
+                  </div>
+                  <Button variant="ghost" size="icon" onClick={() => setShowDossierModal(false)} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {isEditing ? (
+                  /* Edit Form */
+                  <div className="space-y-6">
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                      <div>
+                        <Label>Pays *</Label>
+                        <select
+                          value={formData.country || ''}
+                          onChange={(e) => setFormData({ ...formData, country: e.target.value as ARCountry })}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="">Sélectionner</option>
+                          <option value="Cameroun">🇨🇲 Cameroun</option>
+                          <option value="Congo">🇨🇬 Congo</option>
+                          <option value="Gabon">🇬🇦 Gabon</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Nom du produit *</Label>
+                        <Input
+                          value={formData.productName || ''}
+                          onChange={(e) => setFormData({ ...formData, productName: e.target.value })}
+                          placeholder="Nom du produit"
+                        />
+                      </div>
+                      <div>
+                        <Label>Forme pharmaceutique</Label>
+                        <Input
+                          value={formData.pharmaceuticalForm || ''}
+                          onChange={(e) => setFormData({ ...formData, pharmaceuticalForm: e.target.value })}
+                          placeholder="Comprimé, Gélule, Sirop..."
+                        />
+                      </div>
+                      <div>
+                        <Label>Dosage</Label>
+                        <Input
+                          value={formData.dosage || ''}
+                          onChange={(e) => setFormData({ ...formData, dosage: e.target.value })}
+                          placeholder="500 mg, 250 mg/mL..."
+                        />
+                      </div>
+                      <div>
+                        <Label>Laboratoire *</Label>
+                        <select
+                          value={formData.laboratory || ''}
+                          onChange={(e) => setFormData({ ...formData, laboratory: e.target.value })}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="">Sélectionner</option>
+                          {AR_LABORATORIES.map(lab => (
+                            <option key={lab} value={lab}>{lab}</option>
+                          ))}
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Type de procédure</Label>
+                        <select
+                          value={formData.procedureType || 'AMM'}
+                          onChange={(e) => setFormData({ ...formData, procedureType: e.target.value as ARProcedureType })}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="AMM">AMM</option>
+                          <option value="Renouvellement">Renouvellement</option>
+                          <option value="Variation">Variation</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Priorité</Label>
+                        <select
+                          value={formData.priority || 'normale'}
+                          onChange={(e) => setFormData({ ...formData, priority: e.target.value as AMMDossier['priority'] })}
+                          className="w-full p-2 border rounded-md"
+                        >
+                          <option value="basse">Basse</option>
+                          <option value="normale">Normale</option>
+                          <option value="haute">Haute</option>
+                          <option value="urgente">Urgente</option>
+                        </select>
+                      </div>
+                      <div>
+                        <Label>Date d'échéance prévue</Label>
+                        <Input
+                          type="date"
+                          value={formData.expectedDate || ''}
+                          onChange={(e) => setFormData({ ...formData, expectedDate: e.target.value })}
+                        />
+                      </div>
+                    </div>
+
+                    <div>
+                      <Label>Notes</Label>
+                      <textarea
+                        value={formData.notes || ''}
+                        onChange={(e) => setFormData({ ...formData, notes: e.target.value })}
+                        className="w-full p-2 border rounded-md h-20"
+                        placeholder="Notes additionnelles..."
+                      />
+                    </div>
+                  </div>
+                ) : (
+                  /* View Mode */
+                  <div className="space-y-6">
+                    {/* Dossier Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-muted-foreground">Pays</Label>
+                          <p className="text-xl">{countryFlags[formData.country as ARCountry]} {formData.country}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Produit</Label>
+                          <p className="text-xl font-semibold">{formData.productName}</p>
+                          <p className="text-muted-foreground">{formData.pharmaceuticalForm} - {formData.dosage}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Laboratoire</Label>
+                          <p>{formData.laboratory}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Type de procédure</Label>
+                          <p>{AR_PROCEDURE_LABELS[formData.procedureType as ARProcedureType]}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-muted-foreground">Statut actuel</Label>
+                          <div className="mt-1">
+                            <Badge className={`${AR_STATUS_CONFIG[formData.status as ARDossierStatus].bgColor} ${AR_STATUS_CONFIG[formData.status as ARDossierStatus].color} border text-base px-3 py-1`}>
+                              {AR_STATUS_CONFIG[formData.status as ARDossierStatus].label}
+                            </Badge>
+                          </div>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Responsable</Label>
+                          <p>{formData.responsibleName}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Créé le</Label>
+                          <p>{new Date(formData.createdAt!).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                        {formData.ammReference && (
+                          <div>
+                            <Label className="text-muted-foreground">Référence AMM</Label>
+                            <p className="font-mono text-green-600">{formData.ammReference}</p>
+                          </div>
+                        )}
+                      </div>
+                    </div>
+
+                    {/* Status Change */}
+                    <div className="p-4 bg-muted/50 rounded-lg">
+                      <Label className="mb-2 block">Changer le statut</Label>
+                      <div className="flex flex-wrap gap-2">
+                        {(Object.keys(AR_STATUS_CONFIG) as ARDossierStatus[]).map(status => {
+                          const config = AR_STATUS_CONFIG[status]
+                          const isActive = formData.status === status
+                          return (
+                            <Button
+                              key={status}
+                              variant={isActive ? 'default' : 'outline'}
+                              size="sm"
+                              onClick={() => {
+                                handleUpdateStatus(formData.id!, status)
+                                setFormData({ ...formData, status })
+                              }}
+                            >
+                              {config.label}
+                            </Button>
+                          )
+                        })}
+                      </div>
+                    </div>
+
+                    {/* Documents Section */}
+                    <div>
+                      <div className="flex items-center justify-between mb-3">
+                        <h3 className="font-semibold flex items-center gap-2">
+                          <FileText className="h-5 w-5" />
+                          Documents ({formData.documents?.length || 0})
+                        </h3>
+                        <Button size="sm" variant="outline" onClick={() => setShowDocumentModal(true)}>
+                          <Plus className="h-4 w-4 mr-1" />Ajouter
+                        </Button>
+                      </div>
+
+                      {formData.documents && formData.documents.length > 0 ? (
+                        <div className="space-y-2">
+                          {formData.documents.map(doc => (
+                            <div key={doc.id} className="flex items-center justify-between p-3 bg-muted/30 rounded-lg">
+                              <div className="flex items-center gap-3">
+                                <FileText className="h-5 w-5 text-muted-foreground" />
+                                <div>
+                                  <p className="font-medium">{doc.name}</p>
+                                  <p className="text-sm text-muted-foreground">{AR_DOCUMENT_TYPE_LABELS[doc.type]}</p>
+                                </div>
+                              </div>
+                              <div className="flex items-center gap-2">
+                                <select
+                                  value={doc.status}
+                                  onChange={(e) => {
+                                    const newStatus = e.target.value as ARDocumentStatus
+                                    handleUpdateDocumentStatus(formData.id!, doc.id, newStatus)
+                                    setFormData({
+                                      ...formData,
+                                      documents: formData.documents!.map(d =>
+                                        d.id === doc.id ? { ...d, status: newStatus } : d
+                                      )
+                                    })
+                                  }}
+                                  className={`text-sm p-1 rounded ${
+                                    doc.status === 'recu' ? 'bg-green-100 text-green-700' :
+                                    doc.status === 'non_recu' ? 'bg-red-100 text-red-700' :
+                                    'bg-amber-100 text-amber-700'
+                                  }`}
+                                >
+                                  <option value="recu">✓ Reçu</option>
+                                  <option value="non_recu">✗ Non reçu</option>
+                                  <option value="en_attente">⏳ En attente</option>
+                                </select>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      ) : (
+                        <p className="text-muted-foreground text-center py-4">Aucun document</p>
+                      )}
+                    </div>
+
+                    {/* History Section */}
+                    <div>
+                      <h3 className="font-semibold flex items-center gap-2 mb-3">
+                        <Clock className="h-5 w-5" />
+                        Historique
+                      </h3>
+                      <div className="space-y-2 max-h-40 overflow-y-auto">
+                        {formData.history && formData.history.length > 0 ? (
+                          formData.history.map((entry, i) => (
+                            <div key={entry.id} className="flex items-start gap-3 p-2 bg-muted/30 rounded">
+                              <div className="w-6 h-6 rounded-full bg-primary/10 flex items-center justify-center text-xs font-bold text-primary">
+                                {i + 1}
+                              </div>
+                              <div className="flex-1">
+                                <p className="text-sm">{entry.action}</p>
+                                <p className="text-xs text-muted-foreground">
+                                  {entry.userName} - {new Date(entry.timestamp).toLocaleString('fr-FR')}
+                                </p>
+                              </div>
+                            </div>
+                          ))
+                        ) : (
+                          <p className="text-muted-foreground text-center">Aucun historique</p>
+                        )}
+                      </div>
+                    </div>
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t p-4 flex justify-end gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => setShowDossierModal(false)}>Annuler</Button>
+                    <Button onClick={handleSaveDossier}>
+                      <Save className="h-4 w-4 mr-2" />
+                      {isNewDossier ? 'Créer le dossier' : 'Enregistrer'}
+                    </Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => handleEditDossier(formData as AMMDossier)}>
+                      <Edit className="h-4 w-4 mr-2" />Modifier
+                    </Button>
+                    <Button onClick={() => setShowDossierModal(false)}>Fermer</Button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Add Document Modal */}
+      <AnimatePresence>
+        {showDocumentModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-[60] p-4"
+            onClick={() => setShowDocumentModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-xl w-full max-w-md shadow-2xl"
+            >
+              <div className="p-6 border-b">
+                <h3 className="text-lg font-bold">Ajouter un document</h3>
+              </div>
+              <div className="p-6 space-y-4">
+                <div>
+                  <Label>Type de document</Label>
+                  <select
+                    id="doc-type-select"
+                    className="w-full p-2 border rounded-md"
+                  >
+                    {(Object.keys(AR_DOCUMENT_TYPE_LABELS) as ARDocument['type'][]).map(type => (
+                      <option key={type} value={type}>{AR_DOCUMENT_TYPE_LABELS[type]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label>Nom du document</Label>
+                  <Input id="doc-name-input" placeholder="Nom du document" />
+                </div>
+                <div>
+                  <Label>Statut</Label>
+                  <select
+                    id="doc-status-select"
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="en_attente">En attente</option>
+                    <option value="non_recu">Non reçu</option>
+                    <option value="recu">Reçu</option>
+                  </select>
+                </div>
+              </div>
+              <div className="border-t p-4 flex justify-end gap-2">
+                <Button variant="outline" onClick={() => setShowDocumentModal(false)}>Annuler</Button>
+                <Button onClick={() => {
+                  const type = (document.getElementById('doc-type-select') as HTMLSelectElement).value as ARDocument['type']
+                  const name = (document.getElementById('doc-name-input') as HTMLInputElement).value
+                  const status = (document.getElementById('doc-status-select') as HTMLSelectElement).value as ARDocumentStatus
+
+                  if (!name) {
+                    toast({ title: 'Erreur', description: 'Veuillez entrer un nom de document', variant: 'destructive' })
+                    return
+                  }
+
+                  const newDoc: ARDocument = {
+                    id: `doc-${Date.now()}`,
+                    name,
+                    type,
+                    status,
+                    uploadedAt: status === 'recu' ? new Date().toISOString() : undefined,
+                    uploadedBy: status === 'recu' ? user.name : undefined
+                  }
+
+                  handleAddDocument(formData.id!, newDoc)
+                  setFormData({
+                    ...formData,
+                    documents: [...(formData.documents || []), newDoc]
+                  })
+                  setShowDocumentModal(false)
+                }}>
+                  Ajouter
+                </Button>
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Toaster />
+    </motion.div>
+  )
+}
+
+// ============================================
+// LABORATORIES MODULE
+// ============================================
+
+function LaboratoriesModule({ user }: { user: UserType }) {
+  const [laboratories, setLaboratories] = useState<Laboratory[]>(sampleLaboratories)
+  const [selectedLab, setSelectedLab] = useState<Laboratory | null>(null)
+  const [showLabModal, setShowLabModal] = useState(false)
+  const [showContractModal, setShowContractModal] = useState(false)
+  const [isEditing, setIsEditing] = useState(false)
+  const [isNewLab, setIsNewLab] = useState(false)
+  const [activeTab, setActiveTab] = useState<'dashboard' | 'list' | 'contracts'>('dashboard')
+
+  // Filters
+  const [statusFilter, setStatusFilter] = useState<LaboratoryStatus | 'all'>('all')
+  const [typeFilter, setTypeFilter] = useState<LaboratoryType | 'all'>('all')
+  const [countryFilter, setCountryFilter] = useState<string>('all')
+  const [searchTerm, setSearchTerm] = useState('')
+
+  const { toast } = useToast()
+
+  // Form state
+  const [formData, setFormData] = useState<Partial<Laboratory>>({})
+
+  // Get unique countries
+  const countries = [...new Set(laboratories.map(l => l.country))]
+
+  // Filter laboratories
+  const filteredLabs = laboratories.filter(l => {
+    const matchStatus = statusFilter === 'all' || l.status === statusFilter
+    const matchType = typeFilter === 'all' || l.type === typeFilter
+    const matchCountry = countryFilter === 'all' || l.country === countryFilter
+    const matchSearch = l.name.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        l.code.toLowerCase().includes(searchTerm.toLowerCase()) ||
+                        l.country.toLowerCase().includes(searchTerm.toLowerCase())
+    return matchStatus && matchType && matchCountry && matchSearch
+  })
+
+  // Statistics
+  const stats = {
+    total: laboratories.length,
+    active: laboratories.filter(l => l.status === 'actif').length,
+    inNegotiation: laboratories.filter(l => l.status === 'en_negociation').length,
+    suspended: laboratories.filter(l => l.status === 'suspendu').length,
+    totalProducts: laboratories.reduce((sum, l) => sum + l.productsCount, 0),
+    totalActiveProducts: laboratories.reduce((sum, l) => sum + l.activeProducts, 0),
+    totalAMM: laboratories.reduce((sum, l) => sum + l.ammObtained, 0),
+    totalRevenue: laboratories.reduce((sum, l) => sum + l.totalRevenue, 0),
+    contractsExpiringSoon: laboratories.flatMap(l => l.contracts).filter(c => {
+      const endDate = new Date(c.endDate)
+      const threeMonthsFromNow = new Date()
+      threeMonthsFromNow.setMonth(threeMonthsFromNow.getMonth() + 3)
+      return c.status === 'actif' && endDate <= threeMonthsFromNow
+    }).length
+  }
+
+  // Top laboratories by revenue
+  const topLabsByRevenue = [...laboratories]
+    .filter(l => l.totalRevenue > 0)
+    .sort((a, b) => b.totalRevenue - a.totalRevenue)
+    .slice(0, 5)
+
+  // Handle new laboratory
+  const handleNewLab = () => {
+    setFormData({
+      id: `lab-${Date.now()}`,
+      code: `LAB${String(laboratories.length + 1).padStart(3, '0')}`,
+      status: 'en_negociation',
+      type: 'pharmaceutique',
+      contacts: [],
+      contracts: [],
+      documents: [],
+      productsCount: 0,
+      activeProducts: 0,
+      ammObtained: 0,
+      totalRevenue: 0,
+      relationshipStart: new Date().toISOString().split('T')[0],
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0]
+    })
+    setIsNewLab(true)
+    setIsEditing(true)
+    setShowLabModal(true)
+  }
+
+  // Handle edit laboratory
+  const handleEditLab = (lab: Laboratory) => {
+    setFormData({ ...lab })
+    setIsNewLab(false)
+    setIsEditing(true)
+    setShowLabModal(true)
+  }
+
+  // Handle view laboratory
+  const handleViewLab = (lab: Laboratory) => {
+    setSelectedLab(lab)
+    setIsEditing(false)
+    setShowLabModal(true)
+  }
+
+  // Handle save laboratory
+  const handleSaveLab = () => {
+    if (!formData.name || !formData.email) {
+      toast({ title: 'Erreur', description: 'Veuillez remplir les champs obligatoires', variant: 'destructive' })
+      return
+    }
+
+    const now = new Date().toISOString().split('T')[0]
+
+    if (isNewLab) {
+      const newLab: Laboratory = {
+        ...formData as Laboratory,
+        updatedAt: now
+      }
+      setLaboratories([...laboratories, newLab])
+      toast({ title: 'Laboratoire créé', description: `${newLab.name} a été ajouté` })
+    } else {
+      setLaboratories(laboratories.map(l =>
+        l.id === formData.id ? { ...formData as Laboratory, updatedAt: now } : l
+      ))
+      toast({ title: 'Laboratoire mis à jour', description: `${formData.name} a été modifié` })
+    }
+
+    setShowLabModal(false)
+    setFormData({})
+  }
+
+  return (
+    <motion.div
+      initial="hidden"
+      animate="visible"
+      variants={staggerContainer}
+      className="space-y-6"
+    >
+      {/* Header */}
+      <motion.div variants={fadeInUp} className="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4">
+        <div className="flex items-center gap-4">
+          <div className="w-12 h-12 bg-gradient-to-br from-violet-500 to-purple-600 rounded-xl flex items-center justify-center shadow-lg">
+            <Building2 className="h-6 w-6 text-white" />
+          </div>
+          <div>
+            <h1 className="text-2xl font-bold">Laboratoires Partenaires</h1>
+            <p className="text-muted-foreground">Gestion des partenariats laboratoires</p>
+          </div>
+        </div>
+        <Button className="gap-2" onClick={handleNewLab}>
+          <Plus className="h-4 w-4" />Nouveau laboratoire
+        </Button>
+      </motion.div>
+
+      {/* Tabs */}
+      <motion.div variants={fadeIn} className="flex gap-2 border-b pb-2">
+        {[
+          { id: 'dashboard' as const, label: 'Tableau de bord', icon: BarChart3 },
+          { id: 'list' as const, label: 'Laboratoires', icon: Building2 },
+          { id: 'contracts' as const, label: 'Contrats', icon: FileText }
+        ].map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            className={`flex items-center gap-2 px-4 py-2 rounded-t-lg transition-all ${
+              activeTab === tab.id
+                ? 'bg-primary text-primary-foreground'
+                : 'bg-muted/50 hover:bg-muted text-muted-foreground'
+            }`}
+          >
+            <tab.icon className="h-4 w-4" />
+            {tab.label}
+          </button>
+        ))}
+      </motion.div>
+
+      {/* Dashboard Tab */}
+      {activeTab === 'dashboard' && (
+        <motion.div variants={fadeInUp} className="space-y-6">
+          {/* Stats Cards */}
+          <div className="grid grid-cols-2 sm:grid-cols-4 gap-4">
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-green-100">
+                    <CheckCircle className="h-5 w-5 text-green-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.active}</p>
+                    <p className="text-xs text-muted-foreground">Actifs</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-amber-100">
+                    <Clock className="h-5 w-5 text-amber-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.inNegotiation}</p>
+                    <p className="text-xs text-muted-foreground">En négociation</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-blue-100">
+                    <Package className="h-5 w-5 text-blue-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.totalActiveProducts}</p>
+                    <p className="text-xs text-muted-foreground">Produits actifs</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+            <Card>
+              <CardContent className="p-4">
+                <div className="flex items-center gap-3">
+                  <div className="p-2 rounded-lg bg-red-100">
+                    <AlertTriangle className="h-5 w-5 text-red-600" />
+                  </div>
+                  <div>
+                    <p className="text-2xl font-bold">{stats.contractsExpiringSoon}</p>
+                    <p className="text-xs text-muted-foreground">Contrats à renouveler</p>
+                  </div>
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+
+          {/* Top Laboratories by Revenue */}
+          <Card>
+            <CardHeader>
+              <CardTitle>Top Laboratoires par CA</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {topLabsByRevenue.map((lab, i) => (
+                  <div key={lab.id} className="flex items-center justify-between p-3 bg-muted/50 rounded-lg cursor-pointer hover:bg-muted transition-colors" onClick={() => handleViewLab(lab)}>
+                    <div className="flex items-center gap-3">
+                      <span className="text-lg font-bold text-muted-foreground">#{i + 1}</span>
+                      <div>
+                        <p className="font-medium">{lab.name}</p>
+                        <p className="text-sm text-muted-foreground">{lab.country}</p>
+                      </div>
+                    </div>
+                    <div className="text-right">
+                      <p className="font-bold">{(lab.totalRevenue / 1000000).toFixed(1)}M XAF</p>
+                      <p className="text-sm text-muted-foreground">{lab.activeProducts} produits</p>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Revenue by Country */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+            <Card>
+              <CardHeader>
+                <CardTitle>Répartition par Statut</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(Object.keys(LAB_STATUS_CONFIG) as LaboratoryStatus[]).map(status => {
+                    const count = laboratories.filter(l => l.status === status).length
+                    const config = LAB_STATUS_CONFIG[status]
+                    return (
+                      <div key={status} className="flex items-center justify-between">
+                        <Badge className={`${config.bgColor} ${config.color}`}>{config.label}</Badge>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+
+            <Card>
+              <CardHeader>
+                <CardTitle>Répartition par Type</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="space-y-3">
+                  {(Object.keys(LAB_TYPE_LABELS) as LaboratoryType[]).map(type => {
+                    const count = laboratories.filter(l => l.type === type).length
+                    if (count === 0) return null
+                    return (
+                      <div key={type} className="flex items-center justify-between">
+                        <span className="text-sm">{LAB_TYPE_LABELS[type]}</span>
+                        <span className="font-medium">{count}</span>
+                      </div>
+                    )
+                  })}
+                </div>
+              </CardContent>
+            </Card>
+          </div>
+        </motion.div>
+      )}
+
+      {/* List Tab */}
+      {activeTab === 'list' && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          {/* Filters */}
+          <Card>
+            <CardContent className="p-4">
+              <div className="grid grid-cols-1 sm:grid-cols-4 gap-4">
+                <div>
+                  <Label className="text-xs text-muted-foreground">Recherche</Label>
+                  <div className="relative">
+                    <Search className="absolute left-3 top-1/2 -translate-y-1/2 h-4 w-4 text-muted-foreground" />
+                    <Input
+                      placeholder="Nom, code, pays..."
+                      value={searchTerm}
+                      onChange={(e) => setSearchTerm(e.target.value)}
+                      className="pl-9"
+                    />
+                  </div>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Statut</Label>
+                  <select
+                    value={statusFilter}
+                    onChange={(e) => setStatusFilter(e.target.value as LaboratoryStatus | 'all')}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous</option>
+                    {(Object.keys(LAB_STATUS_CONFIG) as LaboratoryStatus[]).map(s => (
+                      <option key={s} value={s}>{LAB_STATUS_CONFIG[s].label}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Type</Label>
+                  <select
+                    value={typeFilter}
+                    onChange={(e) => setTypeFilter(e.target.value as LaboratoryType | 'all')}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous</option>
+                    {(Object.keys(LAB_TYPE_LABELS) as LaboratoryType[]).map(t => (
+                      <option key={t} value={t}>{LAB_TYPE_LABELS[t]}</option>
+                    ))}
+                  </select>
+                </div>
+                <div>
+                  <Label className="text-xs text-muted-foreground">Pays</Label>
+                  <select
+                    value={countryFilter}
+                    onChange={(e) => setCountryFilter(e.target.value)}
+                    className="w-full p-2 border rounded-md"
+                  >
+                    <option value="all">Tous</option>
+                    {countries.map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Laboratory Cards */}
+          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+            {filteredLabs.map((lab, i) => {
+              const statusConfig = LAB_STATUS_CONFIG[lab.status]
+              return (
+                <motion.div
+                  key={lab.id}
+                  initial={{ opacity: 0, y: 20 }}
+                  animate={{ opacity: 1, y: 0 }}
+                  transition={{ delay: i * 0.05 }}
+                >
+                  <Card className="overflow-hidden hover:shadow-md transition-shadow cursor-pointer" onClick={() => handleViewLab(lab)}>
+                    <div className="p-4 border-b bg-muted/30">
+                      <div className="flex items-start justify-between">
+                        <div>
+                          <p className="text-xs font-mono text-muted-foreground">{lab.code}</p>
+                          <h3 className="font-semibold text-lg">{lab.name}</h3>
+                          <p className="text-sm text-muted-foreground">{lab.city}, {lab.country}</p>
+                        </div>
+                        <Badge className={`${statusConfig.bgColor} ${statusConfig.color}`}>
+                          {statusConfig.label}
+                        </Badge>
+                      </div>
+                    </div>
+                    <CardContent className="p-4">
+                      <div className="grid grid-cols-2 gap-4 text-sm">
+                        <div>
+                          <p className="text-muted-foreground">Produits</p>
+                          <p className="font-medium">{lab.activeProducts}/{lab.productsCount}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">AMM</p>
+                          <p className="font-medium">{lab.ammObtained}</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">Contrats</p>
+                          <p className="font-medium">{lab.contracts.filter(c => c.status === 'actif').length} actif(s)</p>
+                        </div>
+                        <div>
+                          <p className="text-muted-foreground">CA Total</p>
+                          <p className="font-medium">{(lab.totalRevenue / 1000000).toFixed(1)}M</p>
+                        </div>
+                      </div>
+                      {lab.contacts.length > 0 && (
+                        <div className="mt-3 pt-3 border-t">
+                          <p className="text-xs text-muted-foreground">Contact principal</p>
+                          <p className="text-sm font-medium">{lab.contacts.find(c => c.isPrimary)?.name || lab.contacts[0].name}</p>
+                        </div>
+                      )}
+                    </CardContent>
+                  </Card>
+                </motion.div>
+              )
+            })}
+          </div>
+        </motion.div>
+      )}
+
+      {/* Contracts Tab */}
+      {activeTab === 'contracts' && (
+        <motion.div variants={fadeInUp} className="space-y-4">
+          <Card>
+            <CardHeader>
+              <CardTitle>Tous les Contrats</CardTitle>
+              <CardDescription>Vue d'ensemble des contrats avec les laboratoires</CardDescription>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                {laboratories.flatMap(lab =>
+                  lab.contracts.map(contract => ({ ...contract, labName: lab.name, labId: lab.id }))
+                ).sort((a, b) => new Date(a.endDate).getTime() - new Date(b.endDate).getTime()).map(contract => {
+                  const daysUntilExpiry = Math.ceil((new Date(contract.endDate).getTime() - Date.now()) / (1000 * 60 * 60 * 24))
+                  const isExpiringSoon = daysUntilExpiry < 90 && daysUntilExpiry > 0
+                  const isExpired = daysUntilExpiry < 0
+
+                  return (
+                    <div
+                      key={contract.id}
+                      className={`p-4 rounded-lg border ${isExpiringSoon ? 'border-amber-300 bg-amber-50' : isExpired ? 'border-red-300 bg-red-50' : 'bg-muted/50'}`}
+                    >
+                      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+                        <div>
+                          <p className="font-semibold">{contract.labName}</p>
+                          <p className="text-sm text-muted-foreground">
+                            {contract.type === 'exclusivite' ? 'Exclusivité' : contract.type === 'non_exclusivite' ? 'Non-exclusivité' : contract.type === 'distribution' ? 'Distribution' : 'Partenariat'}
+                          </p>
+                        </div>
+                        <div className="flex items-center gap-4">
+                          <div className="text-right">
+                            <p className="text-sm">
+                              {new Date(contract.startDate).toLocaleDateString('fr-FR')} - {new Date(contract.endDate).toLocaleDateString('fr-FR')}
+                            </p>
+                            <p className={`text-sm ${isExpiringSoon ? 'text-amber-600 font-medium' : isExpired ? 'text-red-600 font-medium' : 'text-muted-foreground'}`}>
+                              {isExpired ? 'Expiré' : isExpiringSoon ? `Expire dans ${daysUntilExpiry} jours` : `${daysUntilExpiry} jours restants`}
+                            </p>
+                          </div>
+                          <Badge className={contract.status === 'actif' ? 'bg-green-100 text-green-700' : contract.status === 'en_renouvellement' ? 'bg-amber-100 text-amber-700' : 'bg-gray-100 text-gray-700'}>
+                            {contract.status === 'actif' ? 'Actif' : contract.status === 'en_renouvellement' ? 'En renouvellement' : contract.status === 'resilie' ? 'Résilié' : 'Expiré'}
+                          </Badge>
+                        </div>
+                      </div>
+                      <div className="mt-2 flex flex-wrap gap-2">
+                        {contract.territories.map(t => (
+                          <Badge key={t} variant="outline" className="text-xs">{t}</Badge>
+                        ))}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            </CardContent>
+          </Card>
+        </motion.div>
+      )}
+
+      {/* Laboratory Modal */}
+      <AnimatePresence>
+        {showLabModal && (
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            exit={{ opacity: 0 }}
+            className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4 overflow-y-auto"
+            onClick={() => setShowLabModal(false)}
+          >
+            <motion.div
+              initial={{ scale: 0.9, opacity: 0 }}
+              animate={{ scale: 1, opacity: 1 }}
+              exit={{ scale: 0.9, opacity: 0 }}
+              onClick={e => e.stopPropagation()}
+              className="bg-card rounded-xl w-full max-w-3xl shadow-2xl my-8"
+            >
+              {/* Modal Header */}
+              <div className="bg-gradient-to-r from-violet-600 to-purple-600 p-6 rounded-t-xl">
+                <div className="flex items-center justify-between text-white">
+                  <h2 className="text-xl font-bold">
+                    {isNewLab ? 'Nouveau Laboratoire' : isEditing ? 'Modifier' : formData.name}
+                  </h2>
+                  <Button variant="ghost" size="icon" onClick={() => setShowLabModal(false)} className="text-white hover:bg-white/20">
+                    <X className="h-5 w-5" />
+                  </Button>
+                </div>
+              </div>
+
+              {/* Modal Content */}
+              <div className="p-6 max-h-[70vh] overflow-y-auto">
+                {isEditing ? (
+                  <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <div>
+                      <Label>Code</Label>
+                      <Input value={formData.code || ''} onChange={(e) => setFormData({ ...formData, code: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Nom *</Label>
+                      <Input value={formData.name || ''} onChange={(e) => setFormData({ ...formData, name: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Type</Label>
+                      <select value={formData.type || 'pharmaceutique'} onChange={(e) => setFormData({ ...formData, type: e.target.value as LaboratoryType })} className="w-full p-2 border rounded-md">
+                        {(Object.keys(LAB_TYPE_LABELS) as LaboratoryType[]).map(t => (
+                          <option key={t} value={t}>{LAB_TYPE_LABELS[t]}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label>Statut</Label>
+                      <select value={formData.status || 'en_negociation'} onChange={(e) => setFormData({ ...formData, status: e.target.value as LaboratoryStatus })} className="w-full p-2 border rounded-md">
+                        {(Object.keys(LAB_STATUS_CONFIG) as LaboratoryStatus[]).map(s => (
+                          <option key={s} value={s}>{LAB_STATUS_CONFIG[s].label}</option>
+                        ))}
+                      </select>
+                    </div>
+                    <div>
+                      <Label>Pays</Label>
+                      <Input value={formData.country || ''} onChange={(e) => setFormData({ ...formData, country: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Ville</Label>
+                      <Input value={formData.city || ''} onChange={(e) => setFormData({ ...formData, city: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Adresse</Label>
+                      <Input value={formData.address || ''} onChange={(e) => setFormData({ ...formData, address: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Email *</Label>
+                      <Input type="email" value={formData.email || ''} onChange={(e) => setFormData({ ...formData, email: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Téléphone</Label>
+                      <Input value={formData.phone || ''} onChange={(e) => setFormData({ ...formData, phone: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Site web</Label>
+                      <Input value={formData.website || ''} onChange={(e) => setFormData({ ...formData, website: e.target.value })} />
+                    </div>
+                    <div>
+                      <Label>Debut de relation</Label>
+                      <Input type="date" value={formData.relationshipStart || ''} onChange={(e) => setFormData({ ...formData, relationshipStart: e.target.value })} />
+                    </div>
+                    <div className="md:col-span-2">
+                      <Label>Notes</Label>
+                      <textarea value={formData.notes || ''} onChange={(e) => setFormData({ ...formData, notes: e.target.value })} className="w-full p-2 border rounded-md h-20" />
+                    </div>
+                  </div>
+                ) : (
+                  <div className="space-y-6">
+                    {/* Lab Info */}
+                    <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-muted-foreground">Code</Label>
+                          <p className="font-mono">{formData.code}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Type</Label>
+                          <p>{LAB_TYPE_LABELS[formData.type as LaboratoryType]}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Localisation</Label>
+                          <p>{formData.city}, {formData.country}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Adresse</Label>
+                          <p className="text-sm">{formData.address}</p>
+                        </div>
+                      </div>
+                      <div className="space-y-4">
+                        <div>
+                          <Label className="text-muted-foreground">Statut</Label>
+                          <Badge className={`${LAB_STATUS_CONFIG[formData.status as LaboratoryStatus].bgColor} ${LAB_STATUS_CONFIG[formData.status as LaboratoryStatus].color}`}>
+                            {LAB_STATUS_CONFIG[formData.status as LaboratoryStatus].label}
+                          </Badge>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Contact</Label>
+                          <p>{formData.email}</p>
+                          <p className="text-sm text-muted-foreground">{formData.phone}</p>
+                        </div>
+                        <div>
+                          <Label className="text-muted-foreground">Relation depuis</Label>
+                          <p>{new Date(formData.relationshipStart!).toLocaleDateString('fr-FR')}</p>
+                        </div>
+                      </div>
+                    </div>
+
+                    {/* Stats */}
+                    <div className="grid grid-cols-4 gap-4 p-4 bg-muted/50 rounded-lg">
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{formData.productsCount}</p>
+                        <p className="text-xs text-muted-foreground">Produits</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{formData.activeProducts}</p>
+                        <p className="text-xs text-muted-foreground">Actifs</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{formData.ammObtained}</p>
+                        <p className="text-xs text-muted-foreground">AMM</p>
+                      </div>
+                      <div className="text-center">
+                        <p className="text-2xl font-bold">{((formData.totalRevenue || 0) / 1000000).toFixed(0)}M</p>
+                        <p className="text-xs text-muted-foreground">CA (XAF)</p>
+                      </div>
+                    </div>
+
+                    {/* Contacts */}
+                    {formData.contacts && formData.contacts.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold mb-2">Contacts</h3>
+                        <div className="space-y-2">
+                          {formData.contacts.map(c => (
+                            <div key={c.id} className="flex items-center justify-between p-2 bg-muted/30 rounded">
+                              <div>
+                                <p className="font-medium">{c.name} {c.isPrimary && <Badge className="ml-2 text-xs">Principal</Badge>}</p>
+                                <p className="text-sm text-muted-foreground">{c.position}</p>
+                              </div>
+                              <div className="text-right text-sm">
+                                <p>{c.email}</p>
+                                <p className="text-muted-foreground">{c.phone}</p>
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {/* Contracts */}
+                    {formData.contracts && formData.contracts.length > 0 && (
+                      <div>
+                        <h3 className="font-semibold mb-2">Contrats</h3>
+                        <div className="space-y-2">
+                          {formData.contracts.map(c => (
+                            <div key={c.id} className="p-3 bg-muted/30 rounded">
+                              <div className="flex justify-between">
+                                <Badge variant="outline">{c.type}</Badge>
+                                <Badge className={c.status === 'actif' ? 'bg-green-100 text-green-700' : 'bg-gray-100 text-gray-700'}>{c.status}</Badge>
+                              </div>
+                              <p className="text-sm mt-2">
+                                {new Date(c.startDate).toLocaleDateString('fr-FR')} - {new Date(c.endDate).toLocaleDateString('fr-FR')}
+                              </p>
+                              <div className="flex flex-wrap gap-1 mt-2">
+                                {c.territories.map(t => <Badge key={t} className="text-xs">{t}</Badge>)}
+                              </div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+
+                    {formData.notes && (
+                      <div>
+                        <h3 className="font-semibold mb-2">Notes</h3>
+                        <p className="text-sm bg-muted/30 p-3 rounded">{formData.notes}</p>
+                      </div>
+                    )}
+                  </div>
+                )}
+              </div>
+
+              {/* Modal Footer */}
+              <div className="border-t p-4 flex justify-end gap-2">
+                {isEditing ? (
+                  <>
+                    <Button variant="outline" onClick={() => setShowLabModal(false)}>Annuler</Button>
+                    <Button onClick={handleSaveLab}><Save className="h-4 w-4 mr-2" />Enregistrer</Button>
+                  </>
+                ) : (
+                  <>
+                    <Button variant="outline" onClick={() => handleEditLab(formData as Laboratory)}><Edit className="h-4 w-4 mr-2" />Modifier</Button>
+                    <Button onClick={() => setShowLabModal(false)}>Fermer</Button>
+                  </>
+                )}
+              </div>
+            </motion.div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      <Toaster />
+    </motion.div>
+  )
+}
+
+// ============================================
 // PROFILE MODAL COMPONENT
 // ============================================
 
@@ -16518,6 +18686,8 @@ export default function PharmaLinkApp() {
     { id: 'messages' as Module, label: 'Messagerie', icon: Mail, roles: ['dm', 'superviseur', 'comptabilite', 'marketing', 'admin'] },
     { id: 'stocks' as Module, label: 'Stocks & Produits', icon: Package, roles: ['superviseur', 'comptabilite', 'admin'] },
     { id: 'sales' as Module, label: 'Ventes', icon: ShoppingCart, roles: ['admin', 'comptabilite', 'superviseur'] },
+    { id: 'regulatory' as Module, label: 'Affaires Réglementaires', icon: FileText, roles: ['admin', 'superviseur'] },
+    { id: 'laboratories' as Module, label: 'Laboratoires', icon: Building2, roles: ['admin', 'superviseur', 'comptabilite'] },
     { id: 'planning' as Module, label: 'Planning', icon: Calendar, roles: ['superviseur', 'admin'] },
     { id: 'hcp' as Module, label: 'Prof. de Santé', icon: User, roles: ['dm', 'superviseur', 'admin'] },
     { id: 'geolocation' as Module, label: 'Géolocalisation', icon: MapPin, roles: ['dm', 'superviseur', 'admin'] },
@@ -16550,6 +18720,8 @@ export default function PharmaLinkApp() {
       case 'settings': return <SettingsModule />
       case 'stocks': return <StocksModule user={user} />
       case 'sales': return <SalesModule user={user} />
+      case 'regulatory': return <RegulatoryModule user={user} />
+      case 'laboratories': return <LaboratoriesModule user={user} />
       default: return <DashboardModule user={user} />
     }
   }
