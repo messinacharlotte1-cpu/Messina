@@ -2934,6 +2934,202 @@ const importClientsFromSage = (rows: Record<string, string>[]): Partial<Commerci
 }
 
 // ============================================
+// LABORATORIES CSV EXPORT/IMPORT FUNCTIONS
+// ============================================
+
+// Export des Laboratoires en CSV
+const exportLaboratoriesToCSV = (labs: Laboratory[]): string => {
+  const headers = [
+    'Code', 'Nom', 'Type', 'Statut', 'Pays', 'Ville', 'Adresse', 
+    'SiteWeb', 'Email', 'Téléphone', 'Fax', 'NombreProduits', 
+    'ProduitsActifs', 'AMMObtenues', 'ChiffreAffaires', 
+    'DernièreCommande', 'DébutRelation', 'Notes'
+  ]
+  
+  const typeLabels: Record<LaboratoryType, string> = {
+    'pharmaceutique': 'Pharmaceutique',
+    'cosmetique': 'Cosmétique',
+    'dispositif_medical': 'Dispositif Médical',
+    'nutraceutique': 'Nutraceutique',
+    'autre': 'Autre'
+  }
+  
+  const statusLabels: Record<LaboratoryStatus, string> = {
+    'actif': 'Actif',
+    'inactif': 'Inactif',
+    'en_negociation': 'En négociation',
+    'suspendu': 'Suspendu'
+  }
+  
+  const rows = labs.map(lab => [
+    lab.code,
+    lab.name,
+    typeLabels[lab.type] || lab.type,
+    statusLabels[lab.status] || lab.status,
+    lab.country,
+    lab.city,
+    lab.address,
+    lab.website || '',
+    lab.email,
+    lab.phone,
+    lab.fax || '',
+    lab.productsCount.toString(),
+    lab.activeProducts.toString(),
+    lab.ammObtained.toString(),
+    lab.totalRevenue.toString(),
+    lab.lastOrderDate || '',
+    lab.relationshipStart,
+    (lab.notes || '').replace(/;/g, ',').replace(/\n/g, ' ')
+  ])
+  
+  const csvContent = [
+    headers.join(';'),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+  ].join('\n')
+  
+  return csvContent
+}
+
+// Export des Contrats de Laboratoires en CSV
+const exportLabContractsToCSV = (labs: Laboratory[]): string => {
+  const headers = [
+    'CodeLabo', 'NomLabo', 'IDContrat', 'TypeContrat', 'DateDébut', 
+    'DateFin', 'Statut', 'Produits', 'Territoires', 'ClauseRenouvellement'
+  ]
+  
+  const contractTypeLabels: Record<string, string> = {
+    'exclusivite': 'Exclusivité',
+    'non_exclusivite': 'Non-exclusivité',
+    'distribution': 'Distribution',
+    'partenariat': 'Partenariat'
+  }
+  
+  const contractStatusLabels: Record<ContractStatus, string> = {
+    'actif': 'Actif',
+    'expire': 'Expiré',
+    'en_renouvellement': 'En renouvellement',
+    'resilie': 'Résilié',
+    'en_negociation': 'En négociation'
+  }
+  
+  const rows: string[][] = []
+  
+  labs.forEach(lab => {
+    lab.contracts.forEach(contract => {
+      rows.push([
+        lab.code,
+        lab.name,
+        contract.id,
+        contractTypeLabels[contract.type] || contract.type,
+        contract.startDate,
+        contract.endDate,
+        contractStatusLabels[contract.status] || contract.status,
+        contract.products.join(', '),
+        contract.territories.join(', '),
+        contract.renewalClause ? 'Oui' : 'Non'
+      ])
+    })
+  })
+  
+  const csvContent = [
+    headers.join(';'),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+  ].join('\n')
+  
+  return csvContent
+}
+
+// Import des Laboratoires depuis CSV
+const importLaboratoriesFromCSV = (rows: Record<string, string>[]): Partial<Laboratory>[] => {
+  const typeMap: Record<string, LaboratoryType> = {
+    'pharmaceutique': 'pharmaceutique',
+    'pharmaceutical': 'pharmaceutique',
+    'cosmetique': 'cosmetique',
+    'cosmetic': 'cosmetique',
+    'dispositif medical': 'dispositif_medical',
+    'medical device': 'dispositif_medical',
+    'nutraceutique': 'nutraceutique',
+    'nutraceutical': 'nutraceutique',
+    'autre': 'autre',
+    'other': 'autre'
+  }
+  
+  const statusMap: Record<string, LaboratoryStatus> = {
+    'actif': 'actif',
+    'active': 'actif',
+    'inactif': 'inactif',
+    'inactive': 'inactif',
+    'en negociation': 'en_negociation',
+    'negotiating': 'en_negociation',
+    'suspendu': 'suspendu',
+    'suspended': 'suspendu'
+  }
+  
+  return rows.map(row => {
+    const typeStr = (row['Type'] || row['type'] || 'pharmaceutique').toLowerCase()
+    const statusStr = (row['Statut'] || row['statut'] || 'actif').toLowerCase()
+    
+    return {
+      id: `lab-${Date.now()}-${Math.random().toString(36).substr(2, 9)}`,
+      code: row['Code'] || row['code'] || '',
+      name: row['Nom'] || row['name'] || row['RaisonSociale'] || '',
+      type: typeMap[typeStr] || 'pharmaceutique',
+      status: statusMap[statusStr] || 'actif',
+      country: row['Pays'] || row['country'] || '',
+      city: row['Ville'] || row['city'] || '',
+      address: row['Adresse'] || row['address'] || '',
+      website: row['SiteWeb'] || row['website'] || '',
+      email: row['Email'] || row['email'] || '',
+      phone: row['Téléphone'] || row['telephone'] || row['phone'] || '',
+      fax: row['Fax'] || row['fax'] || '',
+      contacts: [],
+      contracts: [],
+      documents: [],
+      productsCount: parseInt(row['NombreProduits'] || row['productsCount'] || '0') || 0,
+      activeProducts: parseInt(row['ProduitsActifs'] || row['activeProducts'] || '0') || 0,
+      ammObtained: parseInt(row['AMMObtenues'] || row['ammObtained'] || '0') || 0,
+      totalRevenue: parseFloat((row['ChiffreAffaires'] || row['totalRevenue'] || '0').replace(',', '.')) || 0,
+      relationshipStart: row['DébutRelation'] || row['relationshipStart'] || new Date().toISOString().split('T')[0],
+      notes: row['Notes'] || row['notes'] || '',
+      createdAt: new Date().toISOString().split('T')[0],
+      updatedAt: new Date().toISOString().split('T')[0]
+    }
+  }).filter(l => l.code && l.name)
+}
+
+// Export des Contacts de Laboratoires en CSV
+const exportLabContactsToCSV = (labs: Laboratory[]): string => {
+  const headers = [
+    'CodeLabo', 'NomLabo', 'IDContact', 'NomContact', 'Poste', 
+    'Email', 'Téléphone', 'ContactPrincipal'
+  ]
+  
+  const rows: string[][] = []
+  
+  labs.forEach(lab => {
+    lab.contacts.forEach(contact => {
+      rows.push([
+        lab.code,
+        lab.name,
+        contact.id,
+        contact.name,
+        contact.position,
+        contact.email,
+        contact.phone,
+        contact.isPrimary ? 'Oui' : 'Non'
+      ])
+    })
+  })
+  
+  const csvContent = [
+    headers.join(';'),
+    ...rows.map(row => row.map(cell => `"${cell}"`).join(';'))
+  ].join('\n')
+  
+  return csvContent
+}
+
+// ============================================
 // STOCKS MODULE - GESTION DES STOCKS & PRODUITS
 // ============================================
 
@@ -12730,6 +12926,9 @@ function LaboratoriesModule({ user }: { user: UserType }) {
 
   // Form state
   const [formData, setFormData] = useState<Partial<Laboratory>>({})
+  
+  // CSV Import ref
+  const importInputRef = useRef<HTMLInputElement>(null)
 
   // Get unique countries
   const countries = [...new Set(laboratories.map(l => l.country))]
@@ -12768,6 +12967,67 @@ function LaboratoriesModule({ user }: { user: UserType }) {
     .filter(l => l.totalRevenue > 0)
     .sort((a, b) => b.totalRevenue - a.totalRevenue)
     .slice(0, 5)
+
+  // Export CSV - Laboratoires
+  const handleExportLabs = () => {
+    const csvContent = exportLaboratoriesToCSV(laboratories)
+    const filename = `laboratoires_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    toast({ title: 'Export réussi', description: `${laboratories.length} laboratoires exportés` })
+  }
+
+  // Export CSV - Contrats
+  const handleExportContracts = () => {
+    const csvContent = exportLabContractsToCSV(laboratories)
+    const filename = `contrats_laboratoires_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    const totalContracts = laboratories.reduce((sum, l) => sum + l.contracts.length, 0)
+    toast({ title: 'Export réussi', description: `${totalContracts} contrats exportés` })
+  }
+
+  // Export CSV - Contacts
+  const handleExportContacts = () => {
+    const csvContent = exportLabContactsToCSV(laboratories)
+    const filename = `contacts_laboratoires_${new Date().toISOString().split('T')[0]}.csv`
+    downloadCSV(csvContent, filename)
+    const totalContacts = laboratories.reduce((sum, l) => sum + l.contacts.length, 0)
+    toast({ title: 'Export réussi', description: `${totalContacts} contacts exportés` })
+  }
+
+  // Import CSV - Laboratoires
+  const handleImportLabs = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+
+    const reader = new FileReader()
+    reader.onload = (event) => {
+      try {
+        const content = event.target?.result as string
+        const rows = parseCSVImport(content)
+        const importedLabs = importLaboratoriesFromCSV(rows)
+        
+        if (importedLabs.length === 0) {
+          toast({ title: 'Erreur', description: 'Aucun laboratoire valide trouvé dans le fichier', variant: 'destructive' })
+          return
+        }
+
+        // Fusionner avec les laboratoires existants
+        const existingCodes = new Set(laboratories.map(l => l.code))
+        const newLabs = importedLabs.filter(l => !existingCodes.has(l.code || ''))
+        const updatedLabs = [...laboratories, ...newLabs as Laboratory[]]
+        
+        setLaboratories(updatedLabs)
+        toast({ 
+          title: 'Import réussi', 
+          description: `${newLabs.length} nouveaux laboratoires importés (${importedLabs.length - newLabs.length} doublons ignorés)` 
+        })
+      } catch {
+        toast({ title: 'Erreur', description: 'Impossible de lire le fichier CSV', variant: 'destructive' })
+      }
+    }
+    reader.readAsText(file)
+    e.target.value = ''
+  }
 
   // Handle new laboratory
   const handleNewLab = () => {
@@ -12852,9 +13112,53 @@ function LaboratoriesModule({ user }: { user: UserType }) {
             <p className="text-muted-foreground">Gestion des partenariats laboratoires</p>
           </div>
         </div>
-        <Button className="gap-2" onClick={handleNewLab}>
-          <Plus className="h-4 w-4" />Nouveau laboratoire
-        </Button>
+        <div className="flex flex-wrap gap-2">
+          {/* Export Dropdown */}
+          <div className="relative group">
+            <Button variant="outline" className="gap-2">
+              <Download className="h-4 w-4" />Exporter
+            </Button>
+            <div className="absolute right-0 mt-1 w-48 bg-card border rounded-lg shadow-lg opacity-0 invisible group-hover:opacity-100 group-hover:visible transition-all z-10">
+              <button onClick={handleExportLabs} className="w-full px-4 py-2 text-left hover:bg-muted flex items-center gap-2">
+                <Building2 className="h-4 w-4" />Laboratoires
+              </button>
+              <button onClick={handleExportContracts} className="w-full px-4 py-2 text-left hover:bg-muted flex items-center gap-2">
+                <FileText className="h-4 w-4" />Contrats
+              </button>
+              <button onClick={handleExportContacts} className="w-full px-4 py-2 text-left hover:bg-muted flex items-center gap-2">
+                <Users className="h-4 w-4" />Contacts
+              </button>
+            </div>
+          </div>
+          {/* Import Button */}
+          <Button variant="outline" className="gap-2" onClick={() => importInputRef.current?.click()}>
+            <Upload className="h-4 w-4" />Importer
+          </Button>
+          <input
+            ref={importInputRef}
+            type="file"
+            accept=".csv"
+            onChange={handleImportLabs}
+            className="hidden"
+          />
+          <Button className="gap-2" onClick={handleNewLab}>
+            <Plus className="h-4 w-4" />Nouveau
+          </Button>
+        </div>
+      </motion.div>
+
+      {/* CSV Info Banner */}
+      <motion.div variants={fadeIn} className="bg-gradient-to-r from-violet-500/10 to-purple-500/10 rounded-lg p-4 border border-violet-200">
+        <div className="flex items-start gap-3">
+          <FileSpreadsheet className="h-5 w-5 text-violet-600 mt-0.5" />
+          <div>
+            <p className="font-medium text-violet-900">Import/Export CSV</p>
+            <p className="text-sm text-violet-700 mt-1">
+              Exportez vos données laboratoires, contrats et contacts au format CSV. 
+              Les fichiers sont compatibles avec Excel et Sage Saari (séparateur point-virgule).
+            </p>
+          </div>
+        </div>
       </motion.div>
 
       {/* Tabs */}
