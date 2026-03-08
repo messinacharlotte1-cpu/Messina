@@ -1,6 +1,6 @@
 'use client'
 
-import React, { useState, useEffect, useRef } from 'react'
+import React, { useState, useEffect, useRef, useMemo, useCallback } from 'react'
 import { motion, AnimatePresence } from 'framer-motion'
 import {
   Building2, Lock, Eye, EyeOff, Loader2, ArrowRight, MapPin, Users, FileText, DollarSign, Megaphone, BarChart3, LogOut, Bell, Settings, Search, Calendar, TrendingUp, Target, Globe, Activity, User, ChevronRight, CheckCircle, Clock, XCircle, Upload, Download, Filter, Plus, Edit, Trash2, Eye as ViewIcon, Phone, Mail, MapPinned, Car, Home, Coffee, Plane, Send, MessageSquare, FileSpreadsheet, PieChart, LineChart, BarChart, ArrowUpRight, ArrowDownRight, AlertTriangle, Check, X, Camera, Image as ImageIcon, Package, ShoppingCart, TrendingDown, RefreshCw, MoreVertical, ExternalLink, Save, UserPlus, Stethoscope, Printer, Briefcase, Inbox, Reply, Star, CreditCard, ClipboardList, CheckSquare, ClipboardCheck, Play, Truck, Receipt, Shield
@@ -15,6 +15,23 @@ import { Toaster } from '@/components/ui/toaster'
 import { useToast } from '@/hooks/use-toast'
 import { Separator } from '@/components/ui/separator'
 import { PieChart as RechartsPie, Pie, Cell, ResponsiveContainer, BarChart as RechartsBar, Bar, XAxis, YAxis, CartesianGrid, Tooltip, Legend, RadialBarChart, RadialBar, AreaChart, Area } from 'recharts'
+
+// Loading Screen Component - Displayed while JS is evaluating
+function LoadingScreen() {
+  return (
+    <div className="min-h-screen bg-gradient-to-br from-slate-900 via-purple-900 to-slate-900 flex items-center justify-center">
+      <div className="text-center">
+        <motion.div
+          animate={{ rotate: 360 }}
+          transition={{ duration: 2, repeat: Infinity, ease: "linear" }}
+          className="w-16 h-16 mx-auto mb-6 border-4 border-purple-500 border-t-transparent rounded-full"
+        />
+        <h1 className="text-2xl font-bold text-white mb-2">PharmaLink</h1>
+        <p className="text-purple-300">Chargement en cours...</p>
+      </div>
+    </div>
+  )
+}
 
 // ============================================
 // ANIMATION VARIANTS
@@ -18781,6 +18798,9 @@ function ClientPortal({ account, onLogout, onUpdateAvatar }: { account: ClientAc
 // ============================================
 
 export default function PharmaLinkApp() {
+  // Loading state for initial render
+  const [isReady, setIsReady] = useState(false)
+  
   // Fix hydration: toujours initialiser à null, puis charger depuis localStorage dans useEffect
   const [user, setUser] = useState<UserType | null>(null)
   const [sidebarOpen, setSidebarOpen] = useState(true)
@@ -18801,13 +18821,19 @@ export default function PharmaLinkApp() {
   const [accessDeniedReason, setAccessDeniedReason] = useState('')
   const [accessHours, setAccessHours] = useState<AccessHoursConfig[]>(DEFAULT_ACCESS_HOURS)
   
+  // Initial loading effect
+  useEffect(() => {
+    const timer = setTimeout(() => setIsReady(true), 100)
+    return () => clearTimeout(timer)
+  }, [])
+  
   // Fonction de déconnexion (déclarée avant les useEffect qui l'utilisent)
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.removeItem('pharmalink_user')
     setUser(null)
     setMySpaceUnlocked(false)
     setShowAccessDeniedModal(false)
-  }
+  }, [])
   
   // Charger les horaires d'accès depuis localStorage
   useEffect(() => {
@@ -18937,22 +18963,8 @@ export default function PharmaLinkApp() {
   }
 
   // Afficher un loader pendant l'hydratation pour éviter le flash
-  if (!isHydrated) {
-    return (
-      <div className="min-h-screen flex items-center justify-center bg-gradient-to-br from-blue-900 via-blue-800 to-indigo-900">
-        <motion.div
-          initial={{ opacity: 0, scale: 0.9 }}
-          animate={{ opacity: 1, scale: 1 }}
-          className="flex flex-col items-center gap-4"
-        >
-          <div className="relative">
-            <div className="w-16 h-16 border-4 border-white/20 rounded-full" />
-            <div className="w-16 h-16 border-4 border-white border-t-transparent rounded-full animate-spin absolute top-0 left-0" />
-          </div>
-          <p className="text-white/80 text-sm">Chargement...</p>
-        </motion.div>
-      </div>
-    )
+  if (!isHydrated || !isReady) {
+    return <LoadingScreen />
   }
 
   if (!user) return <LoginScreen onLogin={setUser} />
